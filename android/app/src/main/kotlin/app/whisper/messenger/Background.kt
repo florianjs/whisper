@@ -25,8 +25,10 @@ import androidx.core.content.ContextCompat
 object Background {
     private const val CONNECTION_CHANNEL = "connection"
     private const val MESSAGES_CHANNEL = "messages"
+    private const val UPDATES_CHANNEL = "updates"
     const val CONNECTION_ID = 1
     private const val MESSAGES_ID = 2
+    private const val UPDATE_ID = 3
 
     fun channels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -38,6 +40,9 @@ object Background {
         )
         nm.createNotificationChannel(
             NotificationChannel(MESSAGES_CHANNEL, "Messages", NotificationManager.IMPORTANCE_HIGH)
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(UPDATES_CHANNEL, "Updates", NotificationManager.IMPORTANCE_DEFAULT)
         )
     }
 
@@ -70,6 +75,19 @@ object Background {
             .setContentIntent(openApp(context))
             .build()
         NotificationManagerCompat.from(context).notify(MESSAGES_ID, n)
+    }
+
+    /** "A new version is available": opens the app, where the update is. */
+    fun showUpdate(context: Context, title: String, text: String) {
+        if (!canNotify(context)) return
+        val n = NotificationCompat.Builder(context, UPDATES_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_whisper)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setContentIntent(openApp(context))
+            .build()
+        NotificationManagerCompat.from(context).notify(UPDATE_ID, n)
     }
 
     fun clearMessages(context: Context) {

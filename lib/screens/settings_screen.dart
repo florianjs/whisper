@@ -15,6 +15,7 @@ import '../data/message_store.dart';
 import '../data/profile_store.dart';
 import '../data/relay_service.dart';
 import '../data/settings_store.dart';
+import '../data/update_service.dart';
 import '../l10n/app_localizations.dart';
 import '../logic/identity.dart';
 import '../logic/relays.dart';
@@ -26,6 +27,7 @@ import 'pin_setup_screen.dart';
 import '../widgets/panic_sheet.dart';
 import '../widgets/relay_status.dart' show watchTor;
 import '../widgets/ui.dart';
+import '../widgets/update_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -229,6 +231,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: context.text.bodySmall?.copyWith(color: c.faint),
             ),
           ),
+          const _AboutSection(),
           SectionCard(
             label: l.sectionDanger,
             children: [
@@ -248,6 +251,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Installed version and in-app updates (sideloaded builds only).
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  Future<void> _checkNow(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final updates = context.read<UpdateService>();
+    final messenger = ScaffoldMessenger.of(context);
+    if (await updates.check(manual: true)) {
+      if (context.mounted) await showUpdateSheet(context);
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(failureText(l, updates.failure) ?? l.updateUpToDate),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final updates = context.watch<UpdateService>();
+    final settings = context.watch<SettingsStore>();
+    final current = updates.current;
+    if (current == null) return const SizedBox.shrink();
+    return SectionCard(
+      label: l.sectionAbout,
+      children: [
+        SettingsTile(
+          icon: Icons.info_outline_rounded,
+          title: l.aboutVersion('$current'),
+          subtitle: updates.supported ? null : l.updateStoreManaged,
+        ),
+        if (updates.supported) ...[
+          _Toggle(
+            icon: Icons.update_rounded,
+            title: l.updateAutoCheck,
+            body: l.updateAutoCheckBody,
+            value: settings.updateChecks,
+            onChanged: settings.setUpdateChecks,
+          ),
+          SettingsTile(
+            icon: Icons.system_update_rounded,
+            title: updates.hasUpdate
+                ? l.updateBanner('${updates.latest}')
+                : l.updateCheckNow,
+            chevron: true,
+            trailing: updates.stage == UpdateStage.checking
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+            onTap: updates.hasUpdate
+                ? () => showUpdateSheet(context)
+                : () => _checkNow(context),
+          ),
+        ],
+      ],
     );
   }
 }

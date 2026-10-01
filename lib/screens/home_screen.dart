@@ -11,6 +11,7 @@ import '../data/profile_store.dart';
 import '../data/relay_service.dart';
 import '../logic/contact_code.dart';
 import '../data/settings_store.dart';
+import '../data/update_service.dart';
 import '../l10n/app_localizations.dart';
 import '../logic/identity.dart';
 import '../logic/secure_platform.dart';
@@ -23,6 +24,7 @@ import '../widgets/group_tile.dart';
 import '../widgets/panic_sheet.dart';
 import '../widgets/relay_status.dart';
 import '../widgets/ui.dart';
+import '../widgets/update_sheet.dart';
 
 enum _Filter { all, chats, groups, channels }
 
@@ -169,6 +171,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 context.watch<ProfileStore>().myName ?? identity.username,
                 style: context.text.bodySmall?.copyWith(color: c.faint),
               ),
+            ),
+            AnimatedSize(
+              duration: AppMotion.normal,
+              curve: AppMotion.curve,
+              child: context.watch<UpdateService>().hasUpdate
+                  ? const UpdateRow()
+                  : const SizedBox(width: double.infinity),
             ),
             AnimatedSize(
               duration: AppMotion.normal,

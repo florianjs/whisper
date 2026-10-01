@@ -145,6 +145,50 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 result.success(null)
             }
+        val update = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "whisper/update")
+        Updater.onStatus = { status, message ->
+            runOnUiThread { update.invokeMethod("status", mapOf("status" to status, "message" to message)) }
+        }
+        update.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "info" -> result.success(Updater.info(applicationContext))
+                "canInstall" -> result.success(Updater.canInstall(applicationContext))
+                "openInstallPermission" -> {
+                    Updater.openInstallPermission(this)
+                    result.success(null)
+                }
+                "notify" -> {
+                    Background.channels(applicationContext)
+                    Background.showUpdate(
+                        applicationContext,
+                        call.argument<String>("title") ?: "Whisper",
+                        call.argument<String>("text") ?: "",
+                    )
+                    result.success(null)
+                }
+                "install" -> {
+                    val path = call.argument<String>("path")
+                    val cert = call.argument<String>("cert")
+                    if (path == null || cert == null) {
+                        result.error("bad_args", "expected path and cert", null)
+                        return@setMethodCallHandler
+                    }
+                    // Hashing and copying ~100 MB: off the UI thread.
+                    Thread {
+                        try {
+                            Updater.check(applicationContext, path, cert)
+                            Updater.install(applicationContext, path)
+                            runOnUiThread { result.success(null) }
+                        } catch (e: Updater.Rejected) {
+                            runOnUiThread { result.error(e.code, null, null) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("failed", e.message, null) }
+                        }
+                    }.start()
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "whisper/pt")
             .setMethodCallHandler { call, result ->
                 val transport = call.argument<String>("transport")

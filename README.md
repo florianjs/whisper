@@ -80,6 +80,11 @@ tampered build can't replace yours. Check a download with
 - English, French, Spanish, German, Russian and Simplified Chinese.
 - Background delivery without Google services, with notifications that never show a name or
   text.
+- **In-app updates**: about once a day, Whisper looks for a new release through Tor. It
+  downloads the APK for your phone and checks it before installing: checksum, same signing
+  key, newer version. Android asks you to confirm the first update; after that, Android 12+
+  can update silently. You can turn this off; store installs (F-Droid, Obtainium) update
+  through their store.
 
 ---
 

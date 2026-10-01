@@ -964,4 +964,75 @@ class AppLocalizationsRu extends AppLocalizations {
   String nicknameBody(String username) {
     return 'Его видят только принятые тобой контакты, со сквозным шифрованием. Оставь пустым, чтобы тебя видели как $username.';
   }
+
+  @override
+  String get updateAvailableTitle => 'Доступно обновление';
+
+  @override
+  String updateAvailableBody(String version) {
+    return 'Whisper $version готов к установке.';
+  }
+
+  @override
+  String updateBanner(String version) {
+    return 'Доступен Whisper $version';
+  }
+
+  @override
+  String get updateSheetBody =>
+      'Загружается через Tor из релизов Whisper на GitHub и проверяется перед установкой: тот же ключ подписи, что у этого приложения, и более новая версия.';
+
+  @override
+  String get updateInstall => 'Загрузить и установить';
+
+  @override
+  String get updateDownloading => 'Загрузка…';
+
+  @override
+  String get updateInstalling => 'Установка…';
+
+  @override
+  String get updateFailedNetwork =>
+      'Не удалось связаться с GitHub. Попробуй позже.';
+
+  @override
+  String get updateFailedChecksum =>
+      'Загруженный файл повреждён и удалён. Попробуй ещё раз.';
+
+  @override
+  String get updateFailedSignature =>
+      'Этот файл не подписан ключом Whisper. Он не установлен.';
+
+  @override
+  String get updateFailedPermission =>
+      'Разреши Whisper устанавливать обновления, затем вернись и нажми ещё раз.';
+
+  @override
+  String get updateFailedInstall =>
+      'Android не установил обновление. Попробуй позже.';
+
+  @override
+  String get sectionAbout => 'О приложении';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Версия $version';
+  }
+
+  @override
+  String get updateAutoCheck => 'Проверять обновления';
+
+  @override
+  String get updateAutoCheckBody =>
+      'Примерно раз в день, через Tor: GitHub видит только выходной узел Tor.';
+
+  @override
+  String get updateCheckNow => 'Проверить сейчас';
+
+  @override
+  String get updateUpToDate => 'У тебя последняя версия.';
+
+  @override
+  String get updateStoreManaged =>
+      'Обновления приходят из магазина, из которого установлен Whisper.';
 }

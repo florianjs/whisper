@@ -908,4 +908,68 @@ class AppLocalizationsZh extends AppLocalizations {
   String nicknameBody(String username) {
     return '只有你接受的联系人能看到，端到端加密。留空则显示为 $username。';
   }
+
+  @override
+  String get updateAvailableTitle => '有可用更新';
+
+  @override
+  String updateAvailableBody(String version) {
+    return 'Whisper $version 已可安装。';
+  }
+
+  @override
+  String updateBanner(String version) {
+    return 'Whisper $version 已发布';
+  }
+
+  @override
+  String get updateSheetBody =>
+      '通过 Tor 从 Whisper 的 GitHub 发布页下载，安装前会检查：签名密钥与本应用相同，且版本更新。';
+
+  @override
+  String get updateInstall => '下载并安装';
+
+  @override
+  String get updateDownloading => '正在下载…';
+
+  @override
+  String get updateInstalling => '正在安装…';
+
+  @override
+  String get updateFailedNetwork => '无法连接 GitHub，请稍后再试。';
+
+  @override
+  String get updateFailedChecksum => '下载的文件已损坏，已删除，请重试。';
+
+  @override
+  String get updateFailedSignature => '此文件未使用 Whisper 的密钥签名，未安装。';
+
+  @override
+  String get updateFailedPermission => '请允许 Whisper 安装更新，然后返回再点一次。';
+
+  @override
+  String get updateFailedInstall => 'Android 未能安装此更新，请稍后再试。';
+
+  @override
+  String get sectionAbout => '关于';
+
+  @override
+  String aboutVersion(String version) {
+    return '版本 $version';
+  }
+
+  @override
+  String get updateAutoCheck => '检查更新';
+
+  @override
+  String get updateAutoCheckBody => '大约每天一次，经由 Tor：GitHub 只能看到 Tor 出口节点。';
+
+  @override
+  String get updateCheckNow => '立即检查';
+
+  @override
+  String get updateUpToDate => '已是最新版本。';
+
+  @override
+  String get updateStoreManaged => '更新由你安装 Whisper 的应用商店提供。';
 }

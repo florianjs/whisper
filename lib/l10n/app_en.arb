@@ -448,5 +448,45 @@
         "type": "String"
       }
     }
-  }
+  },
+  "updateAvailableTitle": "Update available",
+  "updateAvailableBody": "Whisper {version} is ready to install.",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateBanner": "Whisper {version} is available",
+  "@updateBanner": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateSheetBody": "Downloaded through Tor from Whisper's GitHub releases, then checked before installing: same signing key as this app, and a newer version.",
+  "updateInstall": "Download and install",
+  "updateDownloading": "Downloading…",
+  "updateInstalling": "Installing…",
+  "updateFailedNetwork": "Couldn't reach GitHub. Try again later.",
+  "updateFailedChecksum": "The download was damaged. It was deleted; try again.",
+  "updateFailedSignature": "This file isn't signed with Whisper's key. It was not installed.",
+  "updateFailedPermission": "Allow Whisper to install updates, then come back and tap again.",
+  "updateFailedInstall": "Android didn't install the update. Try again later.",
+  "sectionAbout": "About",
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAutoCheck": "Check for updates",
+  "updateAutoCheckBody": "About once a day, through Tor: GitHub only sees a Tor exit.",
+  "updateCheckNow": "Check now",
+  "updateUpToDate": "You have the latest version.",
+  "updateStoreManaged": "Updates come from the store you installed Whisper from."
 }

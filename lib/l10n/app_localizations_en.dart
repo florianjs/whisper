@@ -951,4 +951,74 @@ class AppLocalizationsEn extends AppLocalizations {
   String nicknameBody(String username) {
     return 'Only contacts you accepted see it, end-to-end encrypted. Leave empty to go by $username.';
   }
+
+  @override
+  String get updateAvailableTitle => 'Update available';
+
+  @override
+  String updateAvailableBody(String version) {
+    return 'Whisper $version is ready to install.';
+  }
+
+  @override
+  String updateBanner(String version) {
+    return 'Whisper $version is available';
+  }
+
+  @override
+  String get updateSheetBody =>
+      'Downloaded through Tor from Whisper\'s GitHub releases, then checked before installing: same signing key as this app, and a newer version.';
+
+  @override
+  String get updateInstall => 'Download and install';
+
+  @override
+  String get updateDownloading => 'Downloading…';
+
+  @override
+  String get updateInstalling => 'Installing…';
+
+  @override
+  String get updateFailedNetwork => 'Couldn\'t reach GitHub. Try again later.';
+
+  @override
+  String get updateFailedChecksum =>
+      'The download was damaged. It was deleted; try again.';
+
+  @override
+  String get updateFailedSignature =>
+      'This file isn\'t signed with Whisper\'s key. It was not installed.';
+
+  @override
+  String get updateFailedPermission =>
+      'Allow Whisper to install updates, then come back and tap again.';
+
+  @override
+  String get updateFailedInstall =>
+      'Android didn\'t install the update. Try again later.';
+
+  @override
+  String get sectionAbout => 'About';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateAutoCheck => 'Check for updates';
+
+  @override
+  String get updateAutoCheckBody =>
+      'About once a day, through Tor: GitHub only sees a Tor exit.';
+
+  @override
+  String get updateCheckNow => 'Check now';
+
+  @override
+  String get updateUpToDate => 'You have the latest version.';
+
+  @override
+  String get updateStoreManaged =>
+      'Updates come from the store you installed Whisper from.';
 }

@@ -23,6 +23,7 @@ import 'data/profile_store.dart';
 import 'data/relay_service.dart';
 import 'data/settings_store.dart';
 import 'data/tor_service.dart';
+import 'data/update_service.dart';
 import 'l10n/app_localizations.dart';
 import 'logic/auto_lock.dart';
 import 'logic/channel.dart';
@@ -114,9 +115,9 @@ Future<void> _start() async {
     transport: relays,
     messages: messages,
   );
-  final platform = PlatformBackground(() {
-    // Notifications are built without a BuildContext: same language rule as
-    // the app (setting, else system, else English).
+  // Notifications are built without a BuildContext: same language rule as
+  // the app (setting, else system, else English).
+  AppLocalizations strings() {
     final code =
         settings.languageCode ??
         WidgetsBinding.instance.platformDispatcher.locale.languageCode;
@@ -125,7 +126,17 @@ Future<void> _start() async {
           ? Locale(code)
           : const Locale('en'),
     );
-  });
+  }
+
+  final platform = PlatformBackground(strings);
+  final updates = UpdateService(
+    settings: settings,
+    platform: PlatformUpdater(),
+    strings: strings,
+    // Only with an open account: the setting lives in the encrypted DB.
+    ready: () => !vault.isLocked && identity.hasIdentity,
+  );
+  unawaited(updates.start());
   runApp(
     WhisperApp(
       vault: vault,
@@ -169,8 +180,12 @@ Future<void> _start() async {
         identity: identity,
         clearClipboard: SecurePlatform.clearClipboard,
         requestVanish: relays.requestVanish,
-        clearNetworkState: TorService.clearDiskState,
+        clearNetworkState: () async {
+          await TorService.clearDiskState();
+          await updates.clearDownloads();
+        },
       ),
+      updates: updates,
     ),
   );
 }
@@ -317,6 +332,7 @@ class WhisperApp extends StatefulWidget {
     required this.wiper,
     this.background,
     this.networkRestored,
+    this.updates,
   });
 
   final LockableVault vault;
@@ -340,12 +356,23 @@ class WhisperApp extends StatefulWidget {
   /// need the connectivity plugin.
   final Stream<void>? networkRestored;
 
+  /// Null in widget tests: an inert service (no in-app updates).
+  final UpdateService? updates;
+
   @override
   State<WhisperApp> createState() => _WhisperAppState();
 }
 
 class _WhisperAppState extends State<WhisperApp> {
   late final GoRouter _router = buildRouter(widget.identity, widget.vault);
+  late final UpdateService _updates =
+      widget.updates ??
+      UpdateService(
+        settings: widget.settings,
+        platform: const NoUpdatePlatform(),
+        strings: () => lookupAppLocalizations(const Locale('en')),
+        ready: () => false,
+      );
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
     onHide: _onHide,
     onShow: _onShow,
@@ -508,6 +535,7 @@ class _WhisperAppState extends State<WhisperApp> {
         ChangeNotifierProvider.value(value: widget.channels),
         ChangeNotifierProvider.value(value: widget.settings),
         Provider.value(value: widget.wiper),
+        ChangeNotifierProvider.value(value: _updates),
       ],
       child: ListenableBuilder(
         listenable: widget.settings,

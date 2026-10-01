@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- In-app updates from GitHub Releases (Updater.kt): install the
+         verified APK; on Android 12+ without a prompt once Whisper is its
+         own installer of record. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <application
         android:label="Whisper"
         android:allowBackup="false"
@@ -42,6 +47,9 @@
             android:name=".KeepAliveService"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging" />
+        <receiver
+            android:name=".InstallStatusReceiver"
+            android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

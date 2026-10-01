@@ -957,4 +957,75 @@ class AppLocalizationsDe extends AppLocalizations {
   String nicknameBody(String username) {
     return 'Nur Kontakte, die du angenommen hast, sehen ihn, Ende-zu-Ende-verschlüsselt. Leer lassen, um als $username zu erscheinen.';
   }
+
+  @override
+  String get updateAvailableTitle => 'Update verfügbar';
+
+  @override
+  String updateAvailableBody(String version) {
+    return 'Whisper $version ist bereit zur Installation.';
+  }
+
+  @override
+  String updateBanner(String version) {
+    return 'Whisper $version ist verfügbar';
+  }
+
+  @override
+  String get updateSheetBody =>
+      'Wird über Tor von den GitHub-Releases von Whisper geladen und vor der Installation geprüft: gleicher Signaturschlüssel wie diese App und eine neuere Version.';
+
+  @override
+  String get updateInstall => 'Laden und installieren';
+
+  @override
+  String get updateDownloading => 'Wird geladen…';
+
+  @override
+  String get updateInstalling => 'Wird installiert…';
+
+  @override
+  String get updateFailedNetwork =>
+      'GitHub ist nicht erreichbar. Versuch es später erneut.';
+
+  @override
+  String get updateFailedChecksum =>
+      'Der Download war beschädigt und wurde gelöscht. Versuch es erneut.';
+
+  @override
+  String get updateFailedSignature =>
+      'Diese Datei ist nicht mit dem Schlüssel von Whisper signiert. Sie wurde nicht installiert.';
+
+  @override
+  String get updateFailedPermission =>
+      'Erlaube Whisper, Updates zu installieren, komm dann zurück und tippe erneut.';
+
+  @override
+  String get updateFailedInstall =>
+      'Android hat das Update nicht installiert. Versuch es später erneut.';
+
+  @override
+  String get sectionAbout => 'Über';
+
+  @override
+  String aboutVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get updateAutoCheck => 'Nach Updates suchen';
+
+  @override
+  String get updateAutoCheckBody =>
+      'Etwa einmal am Tag, über Tor: GitHub sieht nur einen Tor-Ausgang.';
+
+  @override
+  String get updateCheckNow => 'Jetzt prüfen';
+
+  @override
+  String get updateUpToDate => 'Du hast die neueste Version.';
+
+  @override
+  String get updateStoreManaged =>
+      'Updates kommen aus dem Store, über den du Whisper installiert hast.';
 }

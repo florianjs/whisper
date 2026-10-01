@@ -127,6 +127,10 @@ class SettingsStore extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
 
+  /// Look for a new version on GitHub about once a day (through Tor).
+  bool _updateChecks = true;
+  bool get updateChecks => _updateChecks;
+
   Future<void> hydrate() async {
     final Map<String, dynamic>? doc;
     try {
@@ -140,6 +144,7 @@ class SettingsStore extends ChangeNotifier {
       (doc?['paranoia'] as Map?)?.cast<String, dynamic>(),
     );
     _background = doc?['background'] != false;
+    _updateChecks = doc?['updateChecks'] != false;
     _themeMode =
         ThemeMode.values.asNameMap()[doc?['themeMode']] ?? ThemeMode.system;
     notifyListeners();
@@ -152,7 +157,14 @@ class SettingsStore extends ChangeNotifier {
     _paranoia = const ParanoiaSettings();
     _background = true;
     _themeMode = ThemeMode.system;
+    _updateChecks = true;
     notifyListeners();
+  }
+
+  Future<void> setUpdateChecks(bool value) async {
+    _updateChecks = value;
+    notifyListeners();
+    await _save();
   }
 
   Future<void> setThemeMode(ThemeMode value) async {
@@ -185,5 +197,6 @@ class SettingsStore extends ChangeNotifier {
     'paranoia': _paranoia.toJson(),
     'background': _background,
     'themeMode': _themeMode.name,
+    'updateChecks': _updateChecks,
   });
 }

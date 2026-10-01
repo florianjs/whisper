@@ -61,6 +61,14 @@ Status: 2026-09-30, Android build. What Whisper protects, against whom, and wher
 - **Spyware / screen readers:** in-app keyboard (no IME ever attached), accessibility services listed
   and content hidden from them on demand, sensitive clipboard auto-cleared.
 
+### Update channel (GitHub Releases)
+- **Sees:** a Tor exit asking for the latest Whisper release, about once a day at a random time
+  (opt-out), then downloading one APK.
+- **Can't push a fake update:** the APK must match `SHA256SUMS.txt`, be signed with the pinned
+  release certificate (checked by the app, then by Android itself), and carry a higher version
+  (no downgrade to a vulnerable build). The signing key never leaves the maintainer's machine.
+- **Can:** withhold updates. A compromised GitHub account alone can't sign an update.
+
 ## Out of scope / known limits
 
 - **Compromised OS or root malware** can read the screen and memory. Paranoia mode reduces, not removes, exposure.

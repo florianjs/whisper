@@ -1737,6 +1737,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Only contacts you accepted see it, end-to-end encrypted. Leave empty to go by {username}.'**
   String nicknameBody(String username);
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get updateAvailableTitle;
+
+  /// No description provided for @updateAvailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Whisper {version} is ready to install.'**
+  String updateAvailableBody(String version);
+
+  /// No description provided for @updateBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Whisper {version} is available'**
+  String updateBanner(String version);
+
+  /// No description provided for @updateSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded through Tor from Whisper\'s GitHub releases, then checked before installing: same signing key as this app, and a newer version.'**
+  String get updateSheetBody;
+
+  /// No description provided for @updateInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install'**
+  String get updateInstall;
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get updateDownloading;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Installing…'**
+  String get updateInstalling;
+
+  /// No description provided for @updateFailedNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach GitHub. Try again later.'**
+  String get updateFailedNetwork;
+
+  /// No description provided for @updateFailedChecksum.
+  ///
+  /// In en, this message translates to:
+  /// **'The download was damaged. It was deleted; try again.'**
+  String get updateFailedChecksum;
+
+  /// No description provided for @updateFailedSignature.
+  ///
+  /// In en, this message translates to:
+  /// **'This file isn\'t signed with Whisper\'s key. It was not installed.'**
+  String get updateFailedSignature;
+
+  /// No description provided for @updateFailedPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Whisper to install updates, then come back and tap again.'**
+  String get updateFailedPermission;
+
+  /// No description provided for @updateFailedInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Android didn\'t install the update. Try again later.'**
+  String get updateFailedInstall;
+
+  /// No description provided for @sectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get sectionAbout;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String aboutVersion(String version);
+
+  /// No description provided for @updateAutoCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get updateAutoCheck;
+
+  /// No description provided for @updateAutoCheckBody.
+  ///
+  /// In en, this message translates to:
+  /// **'About once a day, through Tor: GitHub only sees a Tor exit.'**
+  String get updateAutoCheckBody;
+
+  /// No description provided for @updateCheckNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Check now'**
+  String get updateCheckNow;
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You have the latest version.'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateStoreManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates come from the store you installed Whisper from.'**
+  String get updateStoreManaged;
 }
 
 class _AppLocalizationsDelegate
