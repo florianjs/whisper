@@ -41,7 +41,9 @@ apksigner=$(ls -d "$sdk"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1
 [[ -x "$apksigner" ]] || fail "apksigner not found in the Android SDK ($sdk)"
 
 # --- Passwords (memory only) ---------------------------------------------
-read -rsp "Keystore password: " WHISPER_STORE_PASSWORD; echo
+read -rsp "Keystore password: " WHISPER_STORE_PASSWORD ||
+  fail "no input: run this script in a terminal (it asks for a password)"
+echo
 export WHISPER_STORE_PASSWORD WHISPER_KEY_PASSWORD="$WHISPER_STORE_PASSWORD"
 keytool -list -keystore "$store" -alias "$alias" \
   -storepass:env WHISPER_STORE_PASSWORD >/dev/null 2>&1 ||

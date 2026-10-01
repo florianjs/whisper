@@ -20,8 +20,12 @@ if [[ -e "$store" ]]; then
   exit 1
 fi
 
-read -rsp "New keystore password (12+ characters): " pass; echo
-read -rsp "Same password again: " again; echo
+no_input() {
+  echo "No input: run this script in a terminal (it asks for a password)." >&2
+  exit 1
+}
+read -rsp "New keystore password (12+ characters): " pass || no_input; echo
+read -rsp "Same password again: " again || no_input; echo
 [[ "$pass" == "$again" ]] || { echo "Passwords differ." >&2; exit 1; }
 (( ${#pass} >= 12 )) || { echo "Too short." >&2; exit 1; }
 export WHISPER_STORE_PASSWORD="$pass"
