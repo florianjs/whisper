@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech bubble with a keyhole: discreet, no name on the icon. 108dp
+     adaptive canvas, artwork inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#8B7CFF"
+        android:pathData="M54,30 C39.6,30 28,40 28,52.5 C28,59.4 31.6,65.6 37.3,69.7 L35,78 L44.6,73.4 C47.6,74.5 50.7,75 54,75 C68.4,75 80,65 80,52.5 C80,40 68.4,30 54,30 Z" />
+    <path
+        android:fillColor="#15131F"
+        android:pathData="M54,43 C50.7,43 48,45.7 48,49 C48,51.2 49.2,53.1 51,54.1 L49.5,62 L58.5,62 L57,54.1 C58.8,53.1 60,51.2 60,49 C60,45.7 57.3,43 54,43 Z" />
+</vector>

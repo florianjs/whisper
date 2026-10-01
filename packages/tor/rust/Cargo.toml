@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2024 Foundation Devices Inc.
+#
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "tor"
+version = "0.1.1"
+authors = ["Igor Cota <igor@foundation.xyz>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+lazy_static = "1.4"
+tokio = { version = "1", features = ["full"] }
+arti-client = { version = "0.36.0", features = ["static", "onion-service-client", "bridge-client", "pt-client"] }
+arti = { version = "1.7.0", features = ["experimental-api", "static"] }
+tor-rtcompat = { version = "0.36.0", features = ["static"] }
+tor-config = "0.36.0"
+log = "0.4.20"
+#android_log-sys = "0.3.1"
+rlimit = "0.10.1"
+anyhow = "1.0.79"
+time = "0.3.36"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+# Specific version for iOS
+security-framework = "=2.10.0"
+
+[build-dependencies]
+cbindgen = "= 0.24.3"

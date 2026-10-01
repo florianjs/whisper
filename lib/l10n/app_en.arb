@@ -1,0 +1,452 @@
+{
+  "@@locale": "en",
+  "appTitle": "Whisper",
+  "appTagline": "Talk freely. No number, no name, no trace.",
+  "back": "Back",
+  "continueLabel": "Continue",
+  "welcomeCreate": "Create my identity",
+  "welcomeRestore": "I have a recovery phrase",
+  "welcomeFootnote": "No phone number. No email. Your keys never leave this phone.",
+  "createGenerating": "Generating your keys…",
+  "createUsernameLabel": "YOU ARE",
+  "createUsernameCaption": "Derived from your key. Nobody picked it, nobody can link it to you.",
+  "seedTitle": "Recovery phrase",
+  "seedIntro": "These words are the only way to get your account back. Whisper does not keep them: this is the only time you will see them. Save them in a password manager (Bitwarden, 1Password…) or on paper.",
+  "seedRevealHint": "Tap to reveal. Make sure nobody is watching.",
+  "seedCopy": "Copy",
+  "seedCopied": "Copied. The clipboard will be cleared in 60 s.",
+  "seedWarning": "Anyone with these words becomes you. Nobody can reset them: lost words means a lost account.",
+  "seedSavedCheckbox": "I saved my words somewhere safe",
+  "verifyTitle": "Check your phrase",
+  "verifyPrompt": "Which one is word #{number}?",
+  "@verifyPrompt": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "verifyProgress": "{done} of {total}",
+  "@verifyProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "verifyWrong": "Not quite. Check your saved words.",
+  "verifyShowAgain": "Show my words again",
+  "restoreTitle": "Restore",
+  "restoreIntro": "Type or paste your 12 or 24 recovery words, separated by spaces.",
+  "restoreWordCount": "{count, plural, =1{1 word} other{{count} words}}",
+  "@restoreWordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreUnknownWord": "Unknown word: {word}",
+  "@restoreUnknownWord": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreInvalid": "These words don't form a valid phrase. Check the order and spelling.",
+  "restoreAction": "Restore my account",
+  "homeGreeting": "Hi, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeYourId": "YOUR ID",
+  "homeComingSoon": "Conversations are coming soon.",
+  "panicTooltip": "Panic button",
+  "panicTitle": "Erase everything",
+  "panicBody": "Deletes your messages, contacts and keys from this phone, asks relays to delete what they hold for you, and logs you out. To come back you will need your recovery phrase.",
+  "panicHold": "Hold to erase",
+  "panicHolding": "Keep holding…",
+  "relayOnline": "Connected · {count}/{total}",
+  "@relayOnline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "relayConnecting": "Connecting…",
+  "relayOffline": "Offline · retrying",
+  "relaysTitle": "Relays",
+  "relaysIntro": "Your messages travel through these relays. They can't read them or see who sent them, but a relay can see your IP address.",
+  "relayUp": "Connected",
+  "relayDown": "Unreachable",
+  "relaysRetry": "Retry now",
+  "homeEmptyTitle": "No conversations yet",
+  "homeEmptyBody": "Share your ID so people can write to you, or paste someone's ID to start.",
+  "newChat": "New chat",
+  "myId": "My ID",
+  "myIdBody": "Share it so people can write to you. It reveals nothing about who you are.",
+  "copyId": "Copy ID",
+  "idCopied": "ID copied",
+  "newChatHint": "Paste an ID (npub…)",
+  "newChatInvalid": "This isn't a valid ID. Check it was copied entirely.",
+  "newChatSelf": "That's your own ID.",
+  "newChatStart": "Start chatting",
+  "chatInputHint": "Message",
+  "chatSend": "Send",
+  "chatEmpty": "Messages are end-to-end encrypted. Only {name} can read them.",
+  "@chatEmpty": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatEncrypted": "End-to-end encrypted",
+  "messageFailed": "Not sent · tap to retry",
+  "youPrefix": "You: {text}",
+  "@youPrefix": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "paste": "Paste",
+  "settingsTitle": "Settings",
+  "settingsLanguage": "Language",
+  "languageSystem": "System",
+  "sectionNetwork": "NETWORK",
+  "relaysManage": "Relays",
+  "relayAddHint": "wss://relay.example",
+  "relayAdd": "Add",
+  "relayInvalid": "Only secure wss:// addresses are accepted.",
+  "relayRemove": "Remove",
+  "relayKeepOne": "Keep at least one relay.",
+  "sectionParanoia": "PARANOIA MODE",
+  "paranoiaMaster": "Paranoia mode",
+  "paranoiaMasterBody": "Maximum protection against spyware and hostile keyboards. Less convenient.",
+  "paranoiaKeyboard": "Whisper keyboard",
+  "paranoiaKeyboardBody": "Type with Whisper's own keyboard: your phone's keyboard never sees what you write.",
+  "paranoiaShuffle": "Shuffle keys",
+  "paranoiaShuffleBody": "Letters move each time the keyboard opens, so recorded touches reveal nothing.",
+  "paranoiaMask": "Hide what I type",
+  "paranoiaMaskBody": "Shows •••• instead of the text you are writing.",
+  "paranoiaBlur": "Blur messages",
+  "paranoiaBlurBody": "Messages stay blurred until you press and hold them.",
+  "paranoiaA11y": "Hide from accessibility services",
+  "paranoiaA11yBody": "Spyware often reads screens through accessibility. This also blocks screen readers (TalkBack).",
+  "paranoiaSecure": "Block screenshots everywhere",
+  "paranoiaSecureBody": "Screenshots, screen recording and the app preview in recent apps show a black screen.",
+  "paranoiaLimits": "No app can protect a fully compromised phone (rooted, or spyware with system access). Paranoia mode stops the common cases.",
+  "a11yWarningTitle": "Apps that can read your screen",
+  "a11yWarningBody": "These apps have accessibility access and could read what is displayed:",
+  "a11yWarningAction": "Review in system settings",
+  "sectionDanger": "DANGER ZONE",
+  "chatHoldToRead": "Hold to read",
+  "keyboardSpace": "space",
+  "requestsTitle": "Requests",
+  "requestsRow": "{count, plural, =1{1 message request} other{{count} message requests}}",
+  "@requestsRow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "requestsEmpty": "No pending requests.",
+  "requestBanner": "{name} wants to chat with you. They see nothing about you, not even your photo, until you accept.",
+  "@requestBanner": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "requestAccept": "Accept",
+  "requestRefuse": "Refuse",
+  "requestBlock": "Block",
+  "requestBlocked": "{name} is blocked.",
+  "@requestBlocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionProfile": "PROFILE",
+  "photoFromGallery": "Choose photo",
+  "photoFromCamera": "Take photo",
+  "photoRemove": "Remove",
+  "photoPrivacy": "Only contacts you accepted get it, end-to-end encrypted. Location and camera details are removed from the photo.",
+  "photoError": "This image can't be used. Try another one.",
+  "chatMenu": "More",
+  "blockConfirmTitle": "Block {name}?",
+  "@blockConfirmTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockConfirmBody": "This conversation will be deleted from this phone and nothing they send will reach you. They won't be notified.",
+  "cancel": "Cancel",
+  "blockedPeople": "Blocked people",
+  "blockedEmpty": "Nobody is blocked.",
+  "unblock": "Unblock",
+  "attach": "Send a photo",
+  "imagePreviewTitle": "Send this photo?",
+  "imageAnonymized": "Location, camera details and date have been removed. The photo was resized.",
+  "imageSend": "Send",
+  "photoPreview": "📷 Photo",
+  "imagePendingRequest": "Photo hidden until you accept this request",
+  "imageUnavailable": "Photo unavailable",
+  "lockTitle": "Whisper is locked",
+  "lockEnterPin": "Enter your PIN",
+  "lockWrongPin": "Wrong PIN",
+  "lockRetryIn": "Too many attempts. Try again in {seconds} s.",
+  "@lockRetryIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "lockBiometric": "Unlock with fingerprint or face",
+  "lockBiometricPrompt": "Unlock Whisper",
+  "lockNow": "Lock now",
+  "lockChecking": "Checking…",
+  "sectionAppLock": "APP LOCK",
+  "appLockSetup": "Protect with a PIN",
+  "appLockSetupBody": "Your account key is encrypted with your PIN. Without it, nothing opens, even with the phone in hand.",
+  "appLockBiometrics": "Fingerprint or face",
+  "appLockBiometricsBody": "Uses the phone's secure biometrics. Adding a new fingerprint turns it off: your PIN will be asked.",
+  "appLockChangePin": "Change PIN",
+  "appLockAutoLock": "Lock automatically",
+  "autoLockImmediately": "Immediately",
+  "autoLockMinute": "After 1 min",
+  "autoLockFiveMinutes": "After 5 min",
+  "appLockDuress": "Duress PIN",
+  "appLockDuressBody": "A second PIN. Typed on the lock screen, it silently erases everything and opens an empty app.",
+  "appLockDuressSet": "Set a duress PIN",
+  "appLockDuressRemove": "Remove duress PIN",
+  "appLockTurnOff": "Turn off app lock",
+  "pinNewTitle": "Choose a PIN",
+  "pinConfirmTitle": "Confirm your PIN",
+  "pinCurrentTitle": "Current PIN",
+  "pinDuressTitle": "Choose a duress PIN",
+  "pinRules": "6 to 12 digits. Avoid 123456 or repeated digits.",
+  "pinWeak": "Too easy to guess. Pick another one.",
+  "pinMismatch": "PINs don't match. Try again.",
+  "pinSameAsReal": "Must be different from your PIN.",
+  "pinEncrypting": "Encrypting your keys…",
+  "signOut": "Sign out",
+  "signOutTitle": "Sign out of this phone?",
+  "signOutBody": "Your messages, contacts and keys will be erased from this phone. To come back you will need your recovery phrase.",
+  "biometricCancel": "Use PIN",
+  "relayTorStarting": "Starting Tor…",
+  "relayTorFailed": "Tor unreachable · retrying",
+  "relaysIntroTor": "Your connection goes through Tor: relays can't see your IP address, and they can't read your messages or see who sent them.",
+  "torToggle": "Route through Tor (recommended)",
+  "torToggleBody": "Hides your IP address from relays and helps get through censorship. Connecting takes a few more seconds.",
+  "torOffWarning": "Without Tor, relays and your network provider can see that you use Whisper and your IP address.",
+  "scanQr": "Scan a QR code",
+  "scanHint": "Point the camera at a Whisper QR code",
+  "scanInvalid": "This QR code is not a Whisper ID.",
+  "myIdQrHint": "Let a friend scan this code to write to you.",
+  "safetyNumber": "Verify safety number",
+  "safetyNumberBody": "Compare these numbers with {name}, in person or on a call. If they match on both phones, nobody is intercepting your conversation.",
+  "@safetyNumberBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "safetyMarkVerified": "Mark as verified",
+  "verified": "Verified",
+  "rename": "Rename",
+  "renameHint": "Nickname (only on this phone)",
+  "save": "Save",
+  "vaultErrorTitle": "Secure storage unavailable",
+  "vaultErrorBody": "Your phone's secure storage didn't respond. Nothing was deleted. Close Whisper and open it again; if it persists, restart your phone.",
+  "newGroup": "New group",
+  "groupName": "Group name",
+  "groupPickMembers": "Members (up to {max})",
+  "@groupPickMembers": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "groupNoContacts": "Add contacts first: only people you've accepted can be invited.",
+  "groupCreate": "Create",
+  "groupMembers": "{count, plural, =1{1 member} other{{count} members}}",
+  "@groupMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupEmpty": "Messages are end-to-end encrypted, sent separately to each member. No server knows this group exists.",
+  "groupInfo": "Group info",
+  "groupAdmin": "Admin",
+  "groupYou": "You",
+  "groupRename": "Rename group",
+  "groupAddMembers": "Add members",
+  "groupRemoveMember": "Remove from group",
+  "groupLeave": "Leave group",
+  "groupLeaveConfirm": "Leave “{name}”? Its messages will be deleted from this phone.",
+  "@groupLeaveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupRemoved": "You're no longer a member of this group.",
+  "groupInvite": "{name} invited you to this group. Refusing tells no one.",
+  "@groupInvite": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "groupInviteRow": "Group invitation",
+  "groupNoAdminLeave": "As admin, you can't leave. Remove the members instead.",
+  "groupNamePrefix": "{name}: {text}",
+  "@groupNamePrefix": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "newChannel": "New channel",
+  "joinChannel": "Join a channel",
+  "channelName": "Channel name",
+  "channelAbout": "Description (optional)",
+  "channelPublic": "Public",
+  "channelPublicBody": "Anyone with the invite link or QR can follow and share it.",
+  "channelPrivate": "Private",
+  "channelPrivateBody": "You invite contacts yourself. Followers get no share button.",
+  "channelCreate": "Create channel",
+  "channelEmptyAdmin": "Only you can post here. Followers can react, anonymously.",
+  "channelEmptyViewer": "No posts yet.",
+  "channelBadge": "Channel",
+  "channelFollowers": "Only the admin posts · reactions are anonymous",
+  "channelInfo": "Channel info",
+  "channelInvite": "Invite",
+  "channelInviteBody": "Scan or share this code to follow the channel. It contains the key to read it: share it only where you want.",
+  "channelInviteCopied": "Invite copied",
+  "channelCopyInvite": "Copy invite",
+  "channelInviteContacts": "Invite contacts",
+  "channelInvitesSent": "Invitations sent",
+  "channelLeave": "Leave channel",
+  "channelLeaveConfirm": "Leave “{name}”? Its posts will be deleted from this phone. The admin won't know.",
+  "@channelLeaveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "channelInviteFrom": "{name} invited you to follow this channel.",
+  "@channelInviteFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "channelInviteRow": "Channel invitation",
+  "channelJoinHint": "Paste an invite (whisper-channel:…)",
+  "channelJoinInvalid": "This isn't a valid channel invite.",
+  "channelJoin": "Follow",
+  "channelEdit": "Edit channel",
+  "channelReact": "React",
+  "channelPostHint": "Post to your followers",
+  "channelAdminNote": "Your channel's key comes from your identity: restoring your recovery phrase gives it back.",
+  "relayTorDisguising": "Starting a disguised connection…",
+  "connProtected": "Protected connection",
+  "connDisguised": "Disguised connection",
+  "connProtectedBody": "Through Tor: relays can't see your IP address.",
+  "connDisguisedBody": "Through Tor, disguised as ordinary traffic: your network can't tell you use Tor.",
+  "torDisguise": "Disguise my connection",
+  "torDisguiseBody": "For places where using Tor itself is risky. Your traffic looks like random data or a video call. Slower to connect. Whisper switches on its own when Tor is blocked.",
+  "bgConnectionTitle": "Private connection active",
+  "bgConnectionText": "Whisper can receive your messages.",
+  "notifyNew": "{count, plural, =1{New message} other{{count} new messages}}",
+  "@notifyNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bgToggle": "Receive in the background",
+  "bgToggleBody": "Keeps a private connection open when Whisper is closed, with a permanent notification. Alerts never show who wrote or what. Uses more battery. No Google service involved.",
+  "sectionBackup": "BACKUP",
+  "backupExport": "Export history",
+  "backupExportBody": "Saves an encrypted file. Only your recovery phrase can open it, on any phone.",
+  "backupImport": "Import history",
+  "backupImportBody": "Adds the conversations of a backup made with this account. Nothing here is overwritten.",
+  "backupWorking": "Preparing the encrypted backup…",
+  "backupSaved": "Encrypted backup saved",
+  "backupImported": "{count, plural, =0{Nothing new in this backup} =1{1 item restored} other{{count} items restored}}",
+  "@backupImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backupWrongKey": "This backup belongs to another account, or is damaged.",
+  "backupBadFile": "This isn't a Whisper backup.",
+  "backupNewer": "This backup was made by a newer version of Whisper.",
+  "backupFailed": "Couldn't read or write the file.",
+  "searchHint": "Search",
+  "searchNoResults": "No results",
+  "filterAll": "All",
+  "filterChats": "Chats",
+  "filterGroups": "Groups",
+  "filterChannels": "Channels",
+  "filterEmpty": "Nothing here yet",
+  "newChatSubtitle": "Write to someone with their ID",
+  "newGroupSubtitle": "Private, end-to-end encrypted",
+  "newChannelSubtitle": "Broadcast to many people",
+  "joinChannelSubtitle": "Scan or paste an invite",
+  "startSomething": "Start",
+  "appearanceTitle": "Appearance",
+  "themeTitle": "Theme",
+  "themeSystem": "System",
+  "themeDark": "Dark",
+  "themeLight": "Light",
+  "nicknameTitle": "Nickname",
+  "nicknameHint": "Your nickname",
+  "nicknameBody": "Only contacts you accepted see it, end-to-end encrypted. Leave empty to go by {username}.",
+  "@nicknameBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  }
+}

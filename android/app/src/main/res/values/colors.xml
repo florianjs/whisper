@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppColors.bg: no white flash between launch and the first frame. -->
+    <color name="splash_bg">#09090B</color>
+    <color name="icon_bg">#15131F</color>
+</resources>
