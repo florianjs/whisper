@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +8,18 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Release signing key, kept out of the repo: android/key.properties gives
+// its path and alias; passwords come from the environment (scripts/release.sh
+// asks for them), so they never sit on disk. Without it, release builds use
+// the debug key: fine for `flutter run --release`, refused by the release
+// script.
+val signing = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) FileInputStream(file).use { load(it) }
+}
+
 android {
-    namespace = "com.florian.whisper"
+    namespace = "app.whisper.messenger"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +33,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.florian.whisper"
+        // Final: changing it after the first release makes a different app.
+        applicationId = "app.whisper.messenger"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -30,11 +43,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (!signing.isEmpty) {
+                storeFile = file(signing.getProperty("storeFile"))
+                keyAlias = signing.getProperty("keyAlias")
+                storePassword = System.getenv("WHISPER_STORE_PASSWORD")
+                keyPassword = System.getenv("WHISPER_KEY_PASSWORD")
+                    ?: System.getenv("WHISPER_STORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(
+                if (signing.isEmpty) "debug" else "release",
+            )
         }
     }
 }

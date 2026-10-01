@@ -1,4 +1,4 @@
-package com.florian.whisper
+package app.whisper.messenger
 
 import android.content.ClipData
 import android.content.ClipboardManager

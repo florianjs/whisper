@@ -66,3 +66,6 @@ packages/*/cargokit/build_tool/.dart_tool/
 *.pem
 *.apk
 *.aab
+
+# Release builds (scripts/release.sh)
+/dist/

@@ -19,6 +19,25 @@ Your identity is a key pair that lives on your phone; your messages travel over
 
 ---
 
+## Install (Android)
+
+1. Open the [latest release](../../releases/latest).
+2. Download **`whisper-vX.Y.Z-arm64-v8a.apk`**, which fits nearly every phone from the
+   last ten years. For an older phone, take `armeabi-v7a`. If unsure, `whisper-vX.Y.Z.apk`
+   works everywhere, but it is about three times bigger: it bundles Tor for every processor
+   type.
+3. Open the file and allow installing from this source when Android asks.
+
+**Verify what you install.** Every release lists the SHA-256 of each file in
+`SHA256SUMS.txt`. Every APK is signed with the same key, whose certificate SHA-256 is published
+in [`release/signing-cert-sha256.txt`](release/signing-cert-sha256.txt) and in each release's
+notes. Android only installs an update signed with the key of the installed version, so a
+tampered build can't replace yours. Check a download with
+`apksigner verify --print-certs whisper-vX.Y.Z.apk`, or let
+[Obtainium](https://github.com/ImranR98/Obtainium) / AppVerifier do it and keep you up to date.
+
+---
+
 ## Features
 
 ### Messaging
@@ -198,11 +217,21 @@ fvm flutter pub get
 fvm flutter run            # first build compiles Tor (~5 min)
 ```
 
-**Checks**
+**Checks** (also run by CI on every push)
 
 ```sh
 fvm flutter analyze
 fvm flutter test
+```
+
+**Releasing** (maintainers): signing happens on the maintainer's machine; the key never
+goes to GitHub.
+
+```sh
+scripts/new-signing-key.sh     # once, ever: back up the key and its password
+# bump `version:` in pubspec.yaml, commit
+scripts/release.sh --dry-run   # build, sign, verify, checksums into dist/
+scripts/release.sh             # same, then tag and publish the GitHub release
 ```
 
 ---
@@ -215,11 +244,12 @@ fvm flutter test
 - [ ] Local mesh for full internet shutdowns
 - [ ] Channel key rotation (invite revocation)
 - [ ] iOS
-- [ ] Distribution outside the Play Store: F-Droid, signed APKs, published checksums
+- [x] Signed APKs with published checksums on GitHub Releases
+- [ ] F-Droid
 
 ---
 
 ## License
 
-Not licensed yet. Note that obfs4 (Lyrebird) is GPL-3, so distributing builds requires a
-GPL-compatible licence for the app.
+[GPL-3.0](LICENSE). Bundled components keep their own licences (the Tor plugin in
+`packages/tor` is MIT, obfs4 / Lyrebird is GPL-3).

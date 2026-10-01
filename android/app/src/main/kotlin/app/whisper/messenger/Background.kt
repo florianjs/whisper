@@ -1,4 +1,4 @@
-package com.florian.whisper
+package app.whisper.messenger
 
 import android.Manifest
 import android.app.Notification
