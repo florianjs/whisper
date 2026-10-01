@@ -42,9 +42,8 @@ tampered build can't replace yours. Check a download with
 
 ## Install (iPhone)
 
-Whisper isn't on the App Store: its rules don't fit an app built for anonymity and censorship
-resistance. Install it with [SideStore](https://sidestore.io), which signs apps with your own
-Apple ID (free):
+Whisper isn't on the App Store ([why](#why-not-the-app-store)). Install it with
+[SideStore](https://sidestore.io), which signs apps with your own Apple ID (free):
 
 1. Install SideStore by following [its guide](https://docs.sidestore.io). It needs a computer
    once.
@@ -57,6 +56,36 @@ SideStore now and then. AltStore works the same way.
 
 On iPhone, messages arrive while Whisper is open: iOS doesn't let apps keep a private connection
 in the background. Relays keep messages for at least two days.
+
+### Why not the App Store?
+
+The App Store is a single switch that governments know how to flip, and Whisper is built for
+exactly the places where they flip it.
+
+- **Apple removes privacy apps on government demand.** In April 2024, at Beijing's order, Apple
+  pulled WhatsApp, Threads, Signal and Telegram from its Chinese store
+  ([Fortune / Bloomberg](https://fortune.com/asia/2024/04/19/apple-removes-meta-whatsapp-threads-china-app-store-beijing-order-national-security)).
+  In Russia, Apple removed 25 VPN apps in July 2024 at the request of the censor Roskomnadzor,
+  Proton VPN among them ([The Hacker News](https://thehackernews.com/2024/07/apple-removes-vpn-apps-from-russian-app.html)),
+  then about 60 more by September
+  ([The Register](https://www.theregister.com/2024/09/26/apple_vpn_russia/)), and kept going in
+  2026 amid the crackdown on Telegram
+  ([TechRadar](https://www.techradar.com/vpn/vpn-privacy-security/apple-removes-custom-vpn-clients-from-russian-app-store-amid-telegram-crackdown)).
+  Apple's answer to Human Rights Watch: it is "required to follow the law everywhere we operate,
+  even where we may disagree"
+  ([HRW, via Eurasia Review](https://eurasiareview.com/25092026-hrw-russia-tightens-crackdown-on-tools-used-to-bypass-online-censorship)).
+- **Tor itself is a target.** Russia, home to one of the largest Tor user bases, blocked the Tor
+  Project's website in December 2021
+  ([BleepingComputer](https://www.bleepingcomputer.com/news/security/tor-s-main-site-blocked-in-russia-as-censorship-widens/)).
+  An app that routes everything through Tor and disguises it is precisely what gets taken down.
+- **A removal hits everyone.** Once pulled, new users can't install the app and existing users
+  stop receiving updates, including security fixes.
+- **The review rules don't fit.** Apple's guidelines say apps for "random or anonymous chat"
+  don't belong on the App Store, and require content filtering and moderation that an app with
+  no central server can't offer ([App Review Guidelines, 1.2](https://developer.apple.com/app-store/review/guidelines/#user-generated-content)).
+
+Shipping the IPA on GitHub doesn't make Whisper impossible to block, but there is no single
+switch: the files can be mirrored anywhere, and their checksums tell you if a copy was altered.
 
 ---
 
