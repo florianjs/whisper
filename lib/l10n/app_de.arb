@@ -293,5 +293,8 @@
   "updateStoreManaged": "Updates kommen aus dem Store, über den du Whisper installiert hast.",
   "paranoiaSecureIos": "Bildschirm bei Aufnahme verbergen",
   "paranoiaSecureBodyIos": "Das iPhone kann Screenshots nicht blockieren. Whisper verbirgt seinen Bildschirm, während er aufgenommen oder gespiegelt wird, und in der App-Übersicht.",
-  "iosBackgroundNote": "Auf dem iPhone kommen Nachrichten an, solange Whisper geöffnet ist: iOS lässt Apps keine private Verbindung im Hintergrund halten. Relays speichern Nachrichten mindestens zwei Tage."
+  "iosBackgroundNote": "Auf dem iPhone kommen Nachrichten an, solange Whisper geöffnet ist: iOS lässt Apps keine private Verbindung im Hintergrund halten. Relays speichern Nachrichten mindestens zwei Tage.",
+  "updateViaTor": "Über Tor laden",
+  "updateViaTorBody": "Langsamer, aber niemand sieht, dass dieses Telefon Whisper lädt.",
+  "updateDirectWarning": "Schneller, aber dein Internetanbieter und GitHub sehen, dass dieses Telefon Whisper lädt. Vermeide das, wo Whisper oder Tor überwacht werden. Die Datei wird genauso geprüft."
 }

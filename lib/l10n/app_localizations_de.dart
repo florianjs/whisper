@@ -1039,4 +1039,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get iosBackgroundNote =>
       'Auf dem iPhone kommen Nachrichten an, solange Whisper geöffnet ist: iOS lässt Apps keine private Verbindung im Hintergrund halten. Relays speichern Nachrichten mindestens zwei Tage.';
+
+  @override
+  String get updateViaTor => 'Über Tor laden';
+
+  @override
+  String get updateViaTorBody =>
+      'Langsamer, aber niemand sieht, dass dieses Telefon Whisper lädt.';
+
+  @override
+  String get updateDirectWarning =>
+      'Schneller, aber dein Internetanbieter und GitHub sehen, dass dieses Telefon Whisper lädt. Vermeide das, wo Whisper oder Tor überwacht werden. Die Datei wird genauso geprüft.';
 }

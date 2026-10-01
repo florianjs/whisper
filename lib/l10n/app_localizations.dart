@@ -1869,6 +1869,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On iPhone, messages arrive while Whisper is open: iOS doesn\'t let apps keep a private connection in the background. Relays keep messages for at least two days.'**
   String get iosBackgroundNote;
+
+  /// No description provided for @updateViaTor.
+  ///
+  /// In en, this message translates to:
+  /// **'Download through Tor'**
+  String get updateViaTor;
+
+  /// No description provided for @updateViaTorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Slower, but nobody can see this phone fetching Whisper.'**
+  String get updateViaTorBody;
+
+  /// No description provided for @updateDirectWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way.'**
+  String get updateDirectWarning;
 }
 
 class _AppLocalizationsDelegate

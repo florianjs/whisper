@@ -20,6 +20,9 @@ class FakeHttp implements UpdateHttp {
   bool fail = false;
   final requested = <Uri>[];
 
+  /// `direct` flag of each text / download call.
+  final direct = <bool>[];
+
   String get apkSha => sha256.convert(apk).hex();
 
   @override
@@ -30,8 +33,9 @@ class FakeHttp implements UpdateHttp {
   }
 
   @override
-  Future<String> text(Uri uri) async {
+  Future<String> text(Uri uri, {bool direct = false}) async {
     requested.add(uri);
+    this.direct.add(direct);
     if (fail) throw const SocketException('no network');
     return sumsOverride ??
         '$apkSha  whisper-v1.1.0-arm64-v8a.apk\n'
@@ -43,8 +47,10 @@ class FakeHttp implements UpdateHttp {
     Uri uri,
     File to, {
     required void Function(int received, int? total) onProgress,
+    bool direct = false,
   }) async {
     requested.add(uri);
+    this.direct.add(direct);
     if (fail) throw const SocketException('no network');
     await to.writeAsBytes(apk);
     onProgress(apk.length, apk.length);
@@ -203,6 +209,30 @@ void main() {
       expect(s.stage, UpdateStage.installing);
     });
 
+    test('through Tor by default; off Tor only when asked', () async {
+      final s = await make();
+      await s.check();
+      await s.install();
+      expect(http.direct, [false, false]);
+
+      // Android declined the first one: the user tries again, off Tor.
+      platform.status.add('failed');
+      http.direct.clear();
+      platform.installs.clear();
+      await s.install(viaTor: false);
+      expect(http.direct, [true, true]);
+      expect(platform.installs, hasLength(1), reason: 'same verification');
+    });
+
+    test('off Tor, a bad checksum is refused all the same', () async {
+      final s = await make();
+      await s.check();
+      http.sumsOverride = '${'f' * 64}  whisper-v1.1.0-arm64-v8a.apk\n';
+      await s.install(viaTor: false);
+      expect(s.failure, UpdateFailure.checksum);
+      expect(platform.installs, isEmpty);
+    });
+
     test('checksum mismatch: deleted, never installed', () async {
       final s = await make();
       await s.check();
@@ -277,4 +307,39 @@ void main() {
     b.reset();
     expect(b.updateChecks, isTrue);
   });
+
+  group('IoUpdateHttp', () {
+    late HttpServer server;
+    late HttpOverrides? previous;
+
+    setUp(() async {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen(
+        (r) => r.response
+          ..write('ok')
+          ..close(),
+      );
+      previous = HttpOverrides.current;
+      // Stand-in for TorHttpOverrides with Tor down: a dead proxy.
+      HttpOverrides.global = _DeadProxyOverrides();
+    });
+
+    tearDown(() async {
+      HttpOverrides.global = previous;
+      await server.close(force: true);
+    });
+
+    test('direct bypasses the app-wide proxy; default does not', () async {
+      final http = IoUpdateHttp();
+      final uri = Uri.parse('http://127.0.0.1:${server.port}/sums');
+      expect(await http.text(uri, direct: true), 'ok');
+      await expectLater(http.text(uri), throwsA(anything));
+    });
+  });
+}
+
+class _DeadProxyOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) =>
+      super.createHttpClient(context)..findProxy = (_) => 'PROXY 127.0.0.1:1';
 }

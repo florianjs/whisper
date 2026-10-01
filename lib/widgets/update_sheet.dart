@@ -30,8 +30,16 @@ String? failureText(AppLocalizations l, UpdateFailure? failure) =>
       UpdateFailure.install => l.updateFailedInstall,
     };
 
-class _UpdateSheet extends StatelessWidget {
+class _UpdateSheet extends StatefulWidget {
   const _UpdateSheet();
+
+  @override
+  State<_UpdateSheet> createState() => _UpdateSheetState();
+}
+
+class _UpdateSheetState extends State<_UpdateSheet> {
+  /// On each time the sheet opens: going off Tor is a one-off choice.
+  bool _viaTor = true;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +93,28 @@ class _UpdateSheet extends StatelessWidget {
               text: error,
             ),
           ],
+          if (!busy) ...[
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(Icons.shield_moon_outlined, color: c.accent),
+              title: Text(l.updateViaTor),
+              subtitle: Text(l.updateViaTorBody),
+              value: _viaTor,
+              onChanged: (v) => setState(() => _viaTor = v),
+            ),
+            AnimatedSize(
+              duration: AppMotion.normal,
+              curve: AppMotion.curve,
+              child: _viaTor
+                  ? const SizedBox(width: double.infinity)
+                  : NoticeCard(
+                      icon: Icons.visibility_outlined,
+                      color: c.danger,
+                      text: l.updateDirectWarning,
+                    ),
+            ),
+          ],
           const SizedBox(height: 20),
           AnimatedSwitcher(
             duration: AppMotion.normal,
@@ -117,7 +147,9 @@ class _UpdateSheet extends StatelessWidget {
                     expand: true,
                     icon: Icons.download_rounded,
                     label: l.updateInstall,
-                    onPressed: latest == null ? null : updates.install,
+                    onPressed: latest == null
+                        ? null
+                        : () => updates.install(viaTor: _viaTor),
                   ),
           ),
         ],

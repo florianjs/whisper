@@ -491,5 +491,8 @@
   "updateStoreManaged": "Updates come from the store you installed Whisper from.",
   "paranoiaSecureIos": "Hide the screen when recorded",
   "paranoiaSecureBodyIos": "iPhone can't block screenshots. Whisper hides its screen while it's recorded or mirrored, and in the app switcher.",
-  "iosBackgroundNote": "On iPhone, messages arrive while Whisper is open: iOS doesn't let apps keep a private connection in the background. Relays keep messages for at least two days."
+  "iosBackgroundNote": "On iPhone, messages arrive while Whisper is open: iOS doesn't let apps keep a private connection in the background. Relays keep messages for at least two days.",
+  "updateViaTor": "Download through Tor",
+  "updateViaTorBody": "Slower, but nobody can see this phone fetching Whisper.",
+  "updateDirectWarning": "Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way."
 }

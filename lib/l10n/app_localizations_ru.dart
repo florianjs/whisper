@@ -1046,4 +1046,15 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get iosBackgroundNote =>
       'На iPhone сообщения приходят, пока Whisper открыт: iOS не позволяет приложениям держать приватное соединение в фоне. Ретрансляторы хранят сообщения не меньше двух дней.';
+
+  @override
+  String get updateViaTor => 'Загружать через Tor';
+
+  @override
+  String get updateViaTorBody =>
+      'Медленнее, но никто не увидит, что этот телефон загружает Whisper.';
+
+  @override
+  String get updateDirectWarning =>
+      'Быстрее, но твой интернет-провайдер и GitHub увидят, что этот телефон загружает Whisper. Не делай так там, где следят за Whisper или Tor. Файл проверяется так же.';
 }

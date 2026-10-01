@@ -29,16 +29,18 @@ abstract class UpdatePlatform {
   Stream<String> get statuses;
 }
 
-/// The network side. Every connection goes through Tor
-/// (TorHttpOverrides): GitHub sees a Tor exit, not the phone.
+/// The network side. Connections go through Tor (TorHttpOverrides): GitHub
+/// sees a Tor exit, not the phone. Only a download the user explicitly
+/// takes off Tor ([direct]) connects straight to GitHub.
 abstract class UpdateHttp {
   /// `Location` of [uri]'s redirect, without following it.
   Future<Uri?> redirectOf(Uri uri);
-  Future<String> text(Uri uri);
+  Future<String> text(Uri uri, {bool direct = false});
   Future<void> download(
     Uri uri,
     File to, {
     required void Function(int received, int? total) onProgress,
+    bool direct = false,
   });
 }
 
@@ -165,7 +167,9 @@ class UpdateService extends ChangeNotifier {
   }
 
   /// Downloads the APK for this phone, verifies it, and starts the install.
-  Future<void> install() async {
+  /// [viaTor] false trades privacy for speed (the network and GitHub see
+  /// this phone fetching Whisper); verification is the same either way.
+  Future<void> install({bool viaTor = true}) async {
     final latest = _latest;
     final device = _device;
     if (latest == null || device == null || !hasUpdate) return;
@@ -185,13 +189,14 @@ class UpdateService extends ChangeNotifier {
     _set(UpdateStage.downloading);
     try {
       final sums = parseSums(
-        await _http.text(assetUri(latest, 'SHA256SUMS.txt')),
+        await _http.text(assetUri(latest, 'SHA256SUMS.txt'), direct: !viaTor),
       );
       final expected = sums[name];
       if (expected == null) throw const FormatException('no checksum');
       await _http.download(
         assetUri(latest, name),
         file,
+        direct: !viaTor,
         onProgress: (received, total) {
           if (total == null || total <= 0) return;
           _progress = received / total;
@@ -275,9 +280,17 @@ class UpdateService extends ChangeNotifier {
 class IoUpdateHttp implements UpdateHttp {
   static const _timeout = Duration(seconds: 60);
 
-  HttpClient _client() => HttpClient()
-    ..connectionTimeout = _timeout
-    ..userAgent = 'Whisper';
+  /// Through Tor (the global TorHttpOverrides), or [direct]: a plain client
+  /// built outside those overrides, for a download the user took off Tor.
+  HttpClient _client({bool direct = false}) {
+    final client = direct
+        ? HttpOverrides.runWithHttpOverrides(HttpClient.new, _DirectOverrides())
+        : HttpClient();
+    if (direct) client.findProxy = (_) => 'DIRECT';
+    return client
+      ..connectionTimeout = _timeout
+      ..userAgent = 'Whisper';
+  }
 
   @override
   Future<Uri?> redirectOf(Uri uri) async {
@@ -295,8 +308,8 @@ class IoUpdateHttp implements UpdateHttp {
   }
 
   @override
-  Future<String> text(Uri uri) async {
-    final client = _client();
+  Future<String> text(Uri uri, {bool direct = false}) async {
+    final client = _client(direct: direct);
     try {
       final response = await (await client.getUrl(
         uri,
@@ -320,8 +333,9 @@ class IoUpdateHttp implements UpdateHttp {
     Uri uri,
     File to, {
     required void Function(int received, int? total) onProgress,
+    bool direct = false,
   }) async {
-    final client = _client();
+    final client = _client(direct: direct);
     final sink = to.openWrite();
     try {
       final response = await (await client.getUrl(
@@ -347,6 +361,9 @@ class IoUpdateHttp implements UpdateHttp {
     }
   }
 }
+
+/// Plain dart:io clients, ignoring the app-wide TorHttpOverrides.
+class _DirectOverrides extends HttpOverrides {}
 
 /// No in-app updates (tests, non-Android): the service stays unsupported.
 class NoUpdatePlatform implements UpdatePlatform {

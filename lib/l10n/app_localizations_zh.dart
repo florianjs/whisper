@@ -983,4 +983,14 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get iosBackgroundNote =>
       '在 iPhone 上，只有打开 Whisper 时才会收到消息：iOS 不允许应用在后台保持私密连接。中继会至少保存消息两天。';
+
+  @override
+  String get updateViaTor => '通过 Tor 下载';
+
+  @override
+  String get updateViaTorBody => '较慢，但没人能看到这部手机在下载 Whisper。';
+
+  @override
+  String get updateDirectWarning =>
+      '更快，但你的网络服务商和 GitHub 会看到这部手机在下载 Whisper。在 Whisper 或 Tor 受监控的地方请勿这样做。文件同样会被校验。';
 }
