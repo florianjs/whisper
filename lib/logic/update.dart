@@ -108,10 +108,12 @@ Duration nextCheckIn(Random random) =>
     Duration(hours: 20) + Duration(minutes: random.nextInt(8 * 60));
 
 /// Installed by a store (Play, F-Droid, Obtainium…): updates come from it,
-/// and installing over it would fail or fight it.
+/// and installing over it would fail or fight it. On iPhone ("ios") they
+/// always do: SideStore / AltStore update from the release source.
 bool installedByStore(String? installer) =>
     installer != null &&
     const {
+      'ios',
       'com.android.vending',
       'org.fdroid.fdroid',
       'org.fdroid.basic',

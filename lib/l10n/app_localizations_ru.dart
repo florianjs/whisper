@@ -1035,4 +1035,15 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get updateStoreManaged =>
       'Обновления приходят из магазина, из которого установлен Whisper.';
+
+  @override
+  String get paranoiaSecureIos => 'Скрывать экран при записи';
+
+  @override
+  String get paranoiaSecureBodyIos =>
+      'iPhone не позволяет запрещать скриншоты. Whisper скрывает свой экран во время записи или трансляции экрана и в переключателе приложений.';
+
+  @override
+  String get iosBackgroundNote =>
+      'На iPhone сообщения приходят, пока Whisper открыт: iOS не позволяет приложениям держать приватное соединение в фоне. Ретрансляторы хранят сообщения не меньше двух дней.';
 }

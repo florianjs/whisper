@@ -290,5 +290,8 @@
   "updateAutoCheckBody": "Etwa einmal am Tag, über Tor: GitHub sieht nur einen Tor-Ausgang.",
   "updateCheckNow": "Jetzt prüfen",
   "updateUpToDate": "Du hast die neueste Version.",
-  "updateStoreManaged": "Updates kommen aus dem Store, über den du Whisper installiert hast."
+  "updateStoreManaged": "Updates kommen aus dem Store, über den du Whisper installiert hast.",
+  "paranoiaSecureIos": "Bildschirm bei Aufnahme verbergen",
+  "paranoiaSecureBodyIos": "Das iPhone kann Screenshots nicht blockieren. Whisper verbirgt seinen Bildschirm, während er aufgenommen oder gespiegelt wird, und in der App-Übersicht.",
+  "iosBackgroundNote": "Auf dem iPhone kommen Nachrichten an, solange Whisper geöffnet ist: iOS lässt Apps keine private Verbindung im Hintergrund halten. Relays speichern Nachrichten mindestens zwei Tage."
 }

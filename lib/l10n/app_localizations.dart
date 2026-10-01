@@ -1851,6 +1851,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Updates come from the store you installed Whisper from.'**
   String get updateStoreManaged;
+
+  /// No description provided for @paranoiaSecureIos.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the screen when recorded'**
+  String get paranoiaSecureIos;
+
+  /// No description provided for @paranoiaSecureBodyIos.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone can\'t block screenshots. Whisper hides its screen while it\'s recorded or mirrored, and in the app switcher.'**
+  String get paranoiaSecureBodyIos;
+
+  /// No description provided for @iosBackgroundNote.
+  ///
+  /// In en, this message translates to:
+  /// **'On iPhone, messages arrive while Whisper is open: iOS doesn\'t let apps keep a private connection in the background. Relays keep messages for at least two days.'**
+  String get iosBackgroundNote;
 }
 
 class _AppLocalizationsDelegate

@@ -4,17 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Native helpers for handling secrets on screen and in the clipboard.
-/// Android implements them in `MainActivity.kt`; elsewhere they degrade to
-/// no-ops / the plain clipboard.
+/// Android implements them in `MainActivity.kt`, iOS in `WhisperPlugin.swift`;
+/// elsewhere they degrade to no-ops / the plain clipboard.
 class SecurePlatform {
   SecurePlatform._();
 
   static const _channel = MethodChannel('whisper/secure');
 
+  static bool get _native =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+
   static int _secureHolders = 0;
 
   /// Blocks screenshots, screen recording and the recents thumbnail
-  /// (Android FLAG_SECURE) until the matching [releaseSecureScreen].
+  /// (Android FLAG_SECURE; on iOS, which can't block screenshots, a cover
+  /// while recording or in the app switcher) until [releaseSecureScreen].
   /// Ref-counted: stacked secret screens (seed → verify → back to seed) must
   /// not unprotect the one still visible.
   static void acquireSecureScreen() {
@@ -27,7 +32,7 @@ class SecurePlatform {
   }
 
   static Future<void> _setSecure(bool enabled) async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
+    if (!_native) return;
     try {
       await _channel.invokeMethod('setSecure', enabled);
     } on MissingPluginException {
@@ -38,13 +43,14 @@ class SecurePlatform {
   static Timer? _clearTimer;
 
   /// Copies [text] flagged as sensitive (hidden from Android 13+ clipboard
-  /// previews) and wipes it after [ttl] if it is still the clipboard content.
+  /// previews; on iOS kept off other devices and expiring natively) and
+  /// wipes it after [ttl] if it is still the clipboard content.
   static Future<void> copySensitive(
     String text, {
     Duration ttl = const Duration(seconds: 60),
   }) async {
     var copied = false;
-    if (defaultTargetPlatform == TargetPlatform.android) {
+    if (_native) {
       try {
         await _channel.invokeMethod('copySensitive', text);
         copied = true;
@@ -98,7 +104,7 @@ class SecurePlatform {
   }
 
   static Future<T?> _call<T>(String method, [Object? args]) async {
-    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    if (!_native) return null;
     try {
       return await _channel.invokeMethod<T>(method, args);
     } on MissingPluginException {

@@ -1026,4 +1026,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get updateStoreManaged =>
       'Las actualizaciones llegan desde la tienda donde instalaste Whisper.';
+
+  @override
+  String get paranoiaSecureIos => 'Ocultar la pantalla al grabar';
+
+  @override
+  String get paranoiaSecureBodyIos =>
+      'El iPhone no permite bloquear las capturas de pantalla. Whisper oculta su pantalla mientras se graba o se duplica, y en el selector de apps.';
+
+  @override
+  String get iosBackgroundNote =>
+      'En iPhone, los mensajes llegan cuando Whisper está abierto: iOS no deja que las apps mantengan una conexión privada en segundo plano. Los relays guardan los mensajes al menos dos días.';
 }

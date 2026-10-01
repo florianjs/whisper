@@ -108,6 +108,7 @@ void main() {
     expect(installedByStore('com.android.vending'), isTrue);
     expect(installedByStore('org.fdroid.fdroid'), isTrue);
     expect(installedByStore('com.android.chrome'), isFalse);
+    expect(installedByStore('ios'), isTrue);
     expect(installedByStore(null), isFalse);
   });
 

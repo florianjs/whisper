@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -116,13 +117,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: tor.setDisguise,
                   ),
               ],
-              _Toggle(
-                icon: Icons.notifications_active_outlined,
-                title: l.bgToggle,
-                body: l.bgToggleBody,
-                value: settings.background,
-                onChanged: settings.setBackground,
-              ),
+              // iOS keeps no connection alive in the background.
+              if (_isIos)
+                SettingsTile(
+                  icon: Icons.notifications_active_outlined,
+                  title: l.bgToggle,
+                  subtitle: l.iosBackgroundNote,
+                )
+              else
+                _Toggle(
+                  icon: Icons.notifications_active_outlined,
+                  title: l.bgToggle,
+                  body: l.bgToggleBody,
+                  value: settings.background,
+                  onChanged: settings.setBackground,
+                ),
               _NavTile(
                 icon: Icons.hub_outlined,
                 label: l.relaysManage,
@@ -217,8 +226,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _Toggle(
                 icon: Icons.no_photography_outlined,
-                title: l.paranoiaSecure,
-                body: l.paranoiaSecureBody,
+                // iOS can't block screenshots: say what it does instead.
+                title: _isIos ? l.paranoiaSecureIos : l.paranoiaSecure,
+                body: _isIos ? l.paranoiaSecureBodyIos : l.paranoiaSecureBody,
                 value: p.secureAllScreens,
                 onChanged: (v) => setP(p.copyWith(secureAllScreens: v)),
               ),
@@ -319,6 +329,8 @@ class _AboutSection extends StatelessWidget {
     );
   }
 }
+
+bool get _isIos => defaultTargetPlatform == TargetPlatform.iOS;
 
 class _NavTile extends StatelessWidget {
   const _NavTile({

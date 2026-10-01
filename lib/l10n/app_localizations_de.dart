@@ -1028,4 +1028,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get updateStoreManaged =>
       'Updates kommen aus dem Store, über den du Whisper installiert hast.';
+
+  @override
+  String get paranoiaSecureIos => 'Bildschirm bei Aufnahme verbergen';
+
+  @override
+  String get paranoiaSecureBodyIos =>
+      'Das iPhone kann Screenshots nicht blockieren. Whisper verbirgt seinen Bildschirm, während er aufgenommen oder gespiegelt wird, und in der App-Übersicht.';
+
+  @override
+  String get iosBackgroundNote =>
+      'Auf dem iPhone kommen Nachrichten an, solange Whisper geöffnet ist: iOS lässt Apps keine private Verbindung im Hintergrund halten. Relays speichern Nachrichten mindestens zwei Tage.';
 }

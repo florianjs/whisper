@@ -290,5 +290,8 @@
   "updateAutoCheckBody": "Más o menos una vez al día, a través de Tor: GitHub solo ve una salida de Tor.",
   "updateCheckNow": "Comprobar ahora",
   "updateUpToDate": "Tienes la última versión.",
-  "updateStoreManaged": "Las actualizaciones llegan desde la tienda donde instalaste Whisper."
+  "updateStoreManaged": "Las actualizaciones llegan desde la tienda donde instalaste Whisper.",
+  "paranoiaSecureIos": "Ocultar la pantalla al grabar",
+  "paranoiaSecureBodyIos": "El iPhone no permite bloquear las capturas de pantalla. Whisper oculta su pantalla mientras se graba o se duplica, y en el selector de apps.",
+  "iosBackgroundNote": "En iPhone, los mensajes llegan cuando Whisper está abierto: iOS no deja que las apps mantengan una conexión privada en segundo plano. Los relays guardan los mensajes al menos dos días."
 }

@@ -387,7 +387,7 @@ class PlatformUpdater implements UpdatePlatform {
 
   @override
   Future<UpdateDevice?> device() async {
-    if (!Platform.isAndroid) return null;
+    if (!Platform.isAndroid && !Platform.isIOS) return null;
     try {
       final info = await _channel.invokeMapMethod<String, Object?>('info');
       if (info == null) return null;

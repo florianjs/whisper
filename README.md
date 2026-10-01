@@ -18,7 +18,7 @@ Your identity is a key pair that lives on your phone; your messages travel over
 - **Built for censorship and seizure**: Tor on by default, disguised connections, a panic wipe
   and a duress PIN.
 
-> **Status:** working MVP, Android first (iOS later). Not audited. Don't rely on it yet where
+> **Status:** working MVP, Android and iPhone. Not audited. Don't rely on it yet where
 > your safety depends on it. See [Limits](#known-limits).
 
 ---
@@ -39,6 +39,24 @@ notes. Android only installs an update signed with the key of the installed vers
 tampered build can't replace yours. Check a download with
 `apksigner verify --print-certs whisper-vX.Y.Z.apk`, or let
 [Obtainium](https://github.com/ImranR98/Obtainium) / AppVerifier do it and keep you up to date.
+
+## Install (iPhone)
+
+Whisper isn't on the App Store: its rules don't fit an app built for anonymity and censorship
+resistance. Install it with [SideStore](https://sidestore.io), which signs apps with your own
+Apple ID (free):
+
+1. Install SideStore by following [its guide](https://docs.sidestore.io). It needs a computer
+   once.
+2. In SideStore, open **Sources**, tap **+**, and add:
+   `https://github.com/florianjs/whisper/releases/latest/download/apps.json`
+3. Install **Whisper** from that source. SideStore notifies you of new versions.
+
+A free Apple ID signs apps for 7 days: SideStore refreshes Whisper in the background, so open
+SideStore now and then. AltStore works the same way.
+
+On iPhone, messages arrive while Whisper is open: iOS doesn't let apps keep a private connection
+in the background. Relays keep messages for at least two days.
 
 ---
 
@@ -252,7 +270,7 @@ scripts/release.sh             # same, then tag and publish the GitHub release
 - [ ] Peer-to-peer over onion services
 - [ ] Local mesh for full internet shutdowns
 - [ ] Channel key rotation (invite revocation)
-- [ ] iOS
+- [x] iOS, through SideStore / AltStore
 - [x] Signed APKs with published checksums on GitHub Releases
 - [ ] F-Droid
 

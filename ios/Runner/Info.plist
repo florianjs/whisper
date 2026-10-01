@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<key>NSCameraUsageDescription</key>
+		<string>Scan a contact's or a channel's QR code, or take a photo to send.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Choose a photo to send or to use as your profile picture. Location and camera details are removed.</string>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Unlock Whisper with Face ID.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>

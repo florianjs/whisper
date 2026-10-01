@@ -19,6 +19,7 @@ step() { echo; echo "▸ $*"; }
 version_line=$(grep -E '^version: ' pubspec.yaml) || fail "no version in pubspec.yaml"
 version=${version_line#version: }
 name=${version%%+*}
+build_number=${version#*+}
 tag="v$name"
 
 [[ -f android/key.properties ]] ||
@@ -35,6 +36,7 @@ if ! $dry_run; then
     fail "tag $tag already exists: bump the version in pubspec.yaml"
   command -v gh >/dev/null || fail "gh CLI not installed"
 fi
+command -v xcodebuild >/dev/null || fail "Xcode not installed (iOS build)"
 
 sdk=${ANDROID_HOME:-$(awk -F= '$1=="sdk.dir"{print $2}' android/local.properties 2>/dev/null)}
 apksigner=$(ls -d "$sdk"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
@@ -85,6 +87,17 @@ for abi in arm64-v8a armeabi-v7a x86_64; do
   cp "$out/app-$abi-release.apk" "$dist/whisper-$tag-$abi.apk"
 done
 
+# iPhone: unsigned IPA. SideStore / AltStore sign it with the user's own
+# Apple ID; no Apple developer account, no App Store review.
+step "Build iOS $tag"
+fvm flutter build ios --release --no-codesign
+payload=$(mktemp -d)
+mkdir "$payload/Payload"
+cp -R build/ios/iphoneos/Runner.app "$payload/Payload/"
+ipa="$PWD/$dist/whisper-$tag.ipa"
+(cd "$payload" && zip -qry "$ipa" Payload)
+rm -rf "$payload"
+
 # --- Verify ---------------------------------------------------------------
 step "Verify signatures"
 for apk in "$dist"/*.apk; do
@@ -113,8 +126,49 @@ for apk in "$dist"/*.apk; do
   echo "✓ $(basename "$apk")"
 done
 
-(cd "$dist" && shasum -a 256 *.apk > SHA256SUMS.txt)
+(cd "$dist" && shasum -a 256 *.apk *.ipa > SHA256SUMS.txt)
 cat "$dist/SHA256SUMS.txt"
+
+# AltStore / SideStore source. Published as a release asset, so
+# releases/latest/download/apps.json always describes the newest version.
+TAG=$tag NAME=$name BUILD=$build_number IPA="$dist/whisper-$tag.ipa" \
+  python3 - > "$dist/apps.json" <<'JSON'
+import json, os, datetime
+repo = "https://github.com/florianjs/whisper"
+tag = os.environ["TAG"]
+print(json.dumps({
+    "name": "Whisper",
+    "identifier": "app.whisper.messenger.source",
+    "sourceURL": f"{repo}/releases/latest/download/apps.json",
+    "iconURL": "https://raw.githubusercontent.com/florianjs/whisper/main/assets/logo.png",
+    "tintColor": "#8E7DFF",
+    "apps": [{
+        "name": "Whisper",
+        "bundleIdentifier": "app.whisper.messenger",
+        "developerName": "Whisper",
+        "subtitle": "Private messenger. No phone number. Over Tor.",
+        "localizedDescription": "End-to-end encrypted messenger with no phone number, "
+            "no account server, Nostr relays over Tor, a panic button and a duress PIN.",
+        "iconURL": "https://raw.githubusercontent.com/florianjs/whisper/main/assets/logo.png",
+        "tintColor": "#8E7DFF",
+        "versions": [{
+            "version": os.environ["NAME"],
+            "buildVersion": os.environ["BUILD"],
+            "date": datetime.date.today().isoformat(),
+            "localizedDescription": f"Whisper {tag}: {repo}/releases/tag/{tag}",
+            "downloadURL": f"{repo}/releases/download/{tag}/whisper-{tag}.ipa",
+            "size": os.path.getsize(os.environ["IPA"]),
+            "minOSVersion": "15.0",
+        }],
+        "appPermissions": {"entitlements": [], "privacy": {
+            "NSCameraUsageDescription": "Scan QR codes, take photos to send.",
+            "NSPhotoLibraryUsageDescription": "Choose photos to send.",
+            "NSFaceIDUsageDescription": "Unlock Whisper with Face ID.",
+        }},
+    }],
+    "news": [],
+}, indent=2))
+JSON
 
 if $dry_run; then
   echo; echo "Dry run done: $dist (not tagged, not published)."
@@ -132,9 +186,13 @@ years; \`armeabi-v7a\` for older ones). If unsure, **whisper-$tag.apk** works
 everywhere but is about three times bigger. Open it, and allow installing from
 this source when Android asks.
 
+**iPhone:** add this source in [SideStore](https://sidestore.io) (or AltStore),
+then install Whisper from it:
+\`https://github.com/florianjs/whisper/releases/latest/download/apps.json\`
+
 ## Verify
 
-- SHA-256 of each file: \`SHA256SUMS.txt\`
+- SHA-256 of each file (APKs and IPA): \`SHA256SUMS.txt\`
 - Signing certificate SHA-256 (the same for every release, see
   \`release/signing-cert-sha256.txt\` in the repository):
 
@@ -145,7 +203,8 @@ this source when Android asks.
 NOTES
 git tag -a "$tag" -m "Whisper $tag"
 git push origin "$tag"
-gh release create "$tag" "$dist"/*.apk "$dist/SHA256SUMS.txt" \
+gh release create "$tag" "$dist"/*.apk "$dist"/*.ipa "$dist/apps.json" \
+  "$dist/SHA256SUMS.txt" \
   --title "Whisper $tag" --notes-file "$notes"
 rm -f "$notes"
 echo; echo "Released $tag."
