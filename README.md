@@ -1,4 +1,8 @@
-# Whisper
+<p align="center">
+  <img src="assets/logo.png" width="160" alt="Whisper logo">
+</p>
+
+<h1 align="center">Whisper</h1>
 
 **Anonymous, end-to-end encrypted messenger.** No phone number, no e-mail, no account server.
 Your identity is a key pair that lives on your phone; your messages travel over
