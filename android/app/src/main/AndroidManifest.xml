@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <!-- Every connection (Tor, relays, updates). Flutter's template only
+         declares it for debug builds: without it here, release builds have
+         no network at all. scripts/release.sh checks it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Background delivery (foreground service, no Google push). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />

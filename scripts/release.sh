@@ -39,6 +39,8 @@ fi
 sdk=${ANDROID_HOME:-$(awk -F= '$1=="sdk.dir"{print $2}' android/local.properties 2>/dev/null)}
 apksigner=$(ls -d "$sdk"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
 [[ -x "$apksigner" ]] || fail "apksigner not found in the Android SDK ($sdk)"
+aapt2=$(ls -d "$sdk"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+[[ -x "$aapt2" ]] || fail "aapt2 not found in the Android SDK ($sdk)"
 
 # --- Passwords (memory only) ---------------------------------------------
 read -rsp "Keystore password: " WHISPER_STORE_PASSWORD ||
@@ -92,6 +94,25 @@ for apk in "$dist"/*.apk; do
   [[ "$got" == "$want" ]] || fail "$apk is not signed with the release key"
   echo "✓ $(basename "$apk")"
 done
+# Debug builds get INTERNET from Flutter's debug manifest; a release without
+# it has no network at all (v1.0.0 shipped like that). Permissions removed on
+# purpose must not come back through a plugin either.
+step "Verify permissions"
+need=(INTERNET FOREGROUND_SERVICE POST_NOTIFICATIONS REQUEST_INSTALL_PACKAGES)
+never=(RECORD_AUDIO READ_EXTERNAL_STORAGE WRITE_EXTERNAL_STORAGE)
+for apk in "$dist"/*.apk; do
+  perms=$("$aapt2" dump permissions "$apk")
+  for p in "${need[@]}"; do
+    grep -qx "uses-permission: name='android.permission.$p'" <<<"$perms" ||
+      fail "$(basename "$apk") lacks android.permission.$p"
+  done
+  for p in "${never[@]}"; do
+    ! grep -q "name='android.permission.$p'" <<<"$perms" ||
+      fail "$(basename "$apk") requests android.permission.$p"
+  done
+  echo "✓ $(basename "$apk")"
+done
+
 (cd "$dist" && shasum -a 256 *.apk > SHA256SUMS.txt)
 cat "$dist/SHA256SUMS.txt"
 
