@@ -1,0 +1,18 @@
+# Native launch screen, generated into android/ and ios/ (files committed).
+# The tool is a plugin with native code: kept out of pubspec.yaml, because a
+# dev-dependency plugin breaks release builds. To regenerate:
+#   fvm flutter pub add --dev flutter_native_splash
+#   fvm dart run flutter_native_splash:create
+#   fvm flutter pub remove flutter_native_splash
+# Colors match the app's light / dark backgrounds (lib/theme/tokens.dart).
+flutter_native_splash:
+  color: "#F5F5F8"
+  color_dark: "#0E0F13"
+  image: assets/branding/splash.png
+  image_dark: assets/branding/splash.png
+  android_12:
+    image: assets/branding/splash_android12.png
+    image_dark: assets/branding/splash_android12.png
+    color: "#F5F5F8"
+    color_dark: "#0E0F13"
+  web: false

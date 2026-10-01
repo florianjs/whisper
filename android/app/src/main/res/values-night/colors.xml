@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme background (tokens.dart). -->
+    <color name="splash_bg">#0E0F13</color>
+</resources>

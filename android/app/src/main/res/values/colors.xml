@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- AppColors.bg: no white flash between launch and the first frame. -->
-    <color name="splash_bg">#09090B</color>
-    <color name="icon_bg">#15131F</color>
+    <!-- Light theme background (tokens.dart): no flash between the splash
+         and the first frame. Dark variant in values-night/. -->
+    <color name="splash_bg">#F5F5F8</color>
+    <color name="ic_launcher_background">#0E0F13</color>
 </resources>

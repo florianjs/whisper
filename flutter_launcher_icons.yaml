@@ -1,0 +1,13 @@
+# App icon, generated into android/ and ios/:
+#   fvm dart run flutter_launcher_icons
+# Sources in assets/branding/ are derived from assets/logo.png.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/icon.png
+  # Dark graphite: on brand, and discreet on a home screen.
+  adaptive_icon_background: "#0E0F13"
+  adaptive_icon_foreground: assets/branding/icon_foreground.png
+  adaptive_icon_foreground_inset: 0 # margin is in the image (safe zone)
+  remove_alpha_ios: true
+  background_color_ios: "#0E0F13"

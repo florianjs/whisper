@@ -159,7 +159,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
-/// Gradient squircle with the app glyph.
+/// The app logo, with a soft accent glow behind it.
 class _Logo extends StatelessWidget {
   const _Logo();
 
@@ -167,20 +167,23 @@ class _Logo extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     return Container(
-      width: 88,
-      height: 88,
+      width: 112,
+      height: 112,
       decoration: BoxDecoration(
-        gradient: c.accentGradient,
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: c.accent.withValues(alpha: 0.35),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
+            color: c.accent.withValues(alpha: c.isDark ? 0.35 : 0.25),
+            blurRadius: 48,
+            spreadRadius: -8,
           ),
         ],
       ),
-      child: Icon(Icons.forum_rounded, color: c.onAccent, size: 42),
+      child: Image.asset(
+        'assets/branding/splash.png',
+        semanticLabel: 'Whisper',
+        filterQuality: FilterQuality.medium,
+      ),
     );
   }
 }
