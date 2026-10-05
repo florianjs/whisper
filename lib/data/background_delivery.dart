@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import 'identity_store.dart';
 import 'notifier.dart';
+import 'relay_service.dart';
 import 'settings_store.dart';
 
 /// The platform side of background delivery: a foreground service that keeps
@@ -47,30 +48,38 @@ class PlatformBackground implements NotificationSink {
 }
 
 /// Runs the foreground service exactly while there is an account to receive
-/// for (unlocked) and the user wants it; wipes notifications on sign-out.
+/// for (unlocked, or locked with its inbox watched) and the user wants it;
+/// wipes notifications on sign-out.
 class BackgroundDelivery {
   BackgroundDelivery({
     required IdentityStore identity,
     required SettingsStore settings,
     required PlatformBackground platform,
     required this.notifier,
+    RelayService? relays,
   }) : _identity = identity,
        _settings = settings,
-       _platform = platform {
+       _platform = platform,
+       _relays = relays {
     _identity.addListener(_sync);
     _settings.addListener(_sync);
+    _relays?.addListener(_sync);
+    _sealed = _relays?.sealedArrivals.listen((_) => notifier.sealedArrival());
     _sync();
   }
 
   final IdentityStore _identity;
   final SettingsStore _settings;
   final PlatformBackground _platform;
+  final RelayService? _relays;
   final ArrivalNotifier notifier;
+  StreamSubscription<String>? _sealed;
   bool? _running;
 
   void _sync() {
-    final want = _identity.hasIdentity && _settings.background;
-    if (!_identity.hasIdentity) unawaited(notifier.reset());
+    final watching = _relays?.watching ?? false;
+    final want = (_identity.hasIdentity || watching) && _settings.background;
+    if (!_identity.hasIdentity && !watching) unawaited(notifier.reset());
     if (want == _running) return;
     _running = want;
     unawaited(want ? _platform.start() : _platform.stop());
@@ -81,6 +90,8 @@ class BackgroundDelivery {
   void dispose() {
     _identity.removeListener(_sync);
     _settings.removeListener(_sync);
+    _relays?.removeListener(_sync);
+    unawaited(_sealed?.cancel());
     notifier.dispose();
   }
 }

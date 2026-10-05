@@ -193,7 +193,8 @@ dangerous. The interface says "Protected" or "Disguised", never jargon.
 ### 6. Someone holding the phone
 
 - **App lock:** PIN (Argon2id, escalating lockout) or biometrics, with auto-lock. While locked,
-  the keys are sealed and the database is closed.
+  the keys are sealed and the database is closed. On Android, a "New message" notification
+  still comes through: the app watches its inbox by public key alone, without opening anything.
 - **Duress PIN:** looks like a normal unlock and silently erases everything.
 - **Panic button:** hold for 1.5 s. It erases the database key first, so even an interrupted
   wipe leaves only unreadable data. Then it sends a NIP-62 "vanish" request to the relays, and

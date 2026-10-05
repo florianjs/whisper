@@ -52,6 +52,15 @@ class ArrivalNotifier {
     unawaited(_sink.show(_unread));
   }
 
+  /// A gift wrap that reached the inbox while the app is locked. It can't be
+  /// opened, so it can't be counted either: an image is several wraps, and
+  /// some carry no message at all. Just "new message", once.
+  void sealedArrival() {
+    if (_foreground || !_enabled() || _unread > 0) return;
+    _unread = 1;
+    unawaited(_sink.show(1));
+  }
+
   /// App visible again: the user sees the messages, drop the notification.
   void setForeground(bool foreground) {
     _foreground = foreground;

@@ -85,4 +85,21 @@ void main() {
     expect(sink.clears, 1);
     expect(n.unread, 0);
   });
+
+  test('locked: sealed wraps give one generic notification, no count', () {
+    n.setForeground(false);
+    n.sealedArrival();
+    n.sealedArrival();
+    expect(sink.shown, [1]);
+    n.setForeground(true);
+    expect(sink.clears, 1);
+  });
+
+  test('locked, in the foreground or disabled: silent', () {
+    n.sealedArrival();
+    enabled = false;
+    n.setForeground(false);
+    n.sealedArrival();
+    expect(sink.shown, isEmpty);
+  });
 }

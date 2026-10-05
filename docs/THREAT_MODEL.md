@@ -79,7 +79,10 @@ Status: 2026-09-30, Android build. What Whisper protects, against whom, and wher
 - **Relays deleting data** after a vanish request is voluntary.
 - **Background delivery** without Google: a foreground service keeps the process, Tor and the
   relay connections alive (permanent low-priority notification). "New message" notifications
-  carry a count only — never a name or text. A locked app can't decrypt, so it stays silent.
+  carry a count only — never a name or text. A locked app can't decrypt: it keeps only its
+  public key (memory, never disk) and an anonymous subscription for gift wraps addressed to it,
+  enough to say "New message" with no count. The relays, which see that key on every gift wrap
+  anyway, learn that the client is online while locked.
 - **Distribution:** the APK itself may be blocked; F-Droid / direct download / checksum publication planned.
 - **Licence:** obfs4 (Lyrebird) is GPL-3; distribution requires a GPL-compatible app licence.
 

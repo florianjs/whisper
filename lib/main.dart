@@ -164,6 +164,7 @@ Future<void> _start() async {
         identity: identity,
         settings: settings,
         platform: platform,
+        relays: relays,
         notifier: ArrivalNotifier(
           arrivals: [messages.arrivals, groups.arrivals],
           sink: platform,
@@ -425,7 +426,15 @@ class _WhisperAppState extends State<WhisperApp> {
   /// disconnect) and close the DB. Unlocked: bring everything back.
   void _onVaultChanged() {
     final vault = widget.vault;
+    // Unlocked, lock turned off, or wiped (panic, duress PIN).
+    if (!vault.isLocked || !vault.isEnabled) widget.relays.stopWatching();
     if (vault.isLocked && widget.identity.hasIdentity) {
+      // The account key leaves memory, but "a message arrived" only needs
+      // the public key. Read the setting now: forgetting resets it. Android
+      // only: iOS keeps no connection in the background anyway.
+      if (widget.settings.background && Platform.isAndroid) {
+        widget.relays.watchInbox();
+      }
       widget.identity.forget();
       final db = widget.db;
       if (db is Db) unawaited(db.close());

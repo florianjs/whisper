@@ -75,6 +75,36 @@ class FakeBackend implements RelayBackend {
   void emit(Map<String, bool> m) => controller.add(m);
 }
 
+class FakeWatch implements WatchBackend {
+  FakeWatch(this.relays);
+  final List<String> relays;
+  final controller = StreamController<Map<String, bool>>.broadcast(sync: true);
+  final wraps = StreamController<Nip01Event>.broadcast(sync: true);
+  final watched = <String>[];
+  int reconnects = 0;
+  bool disposed = false;
+
+  @override
+  Stream<Map<String, bool>> get connectivity => controller.stream;
+
+  @override
+  Future<void> reconnect() async => reconnects++;
+
+  @override
+  Stream<Nip01Event> newGiftWraps(String pubkey) {
+    watched.add(pubkey);
+    return wraps.stream;
+  }
+
+  @override
+  Future<void> dispose() async => disposed = true;
+
+  void emit(Map<String, bool> m) => controller.add(m);
+}
+
+Nip01Event wrap(String content) =>
+    Nip01Event(pubKey: 'cd' * 32, kind: 1059, tags: const [], content: content);
+
 void main() {
   late IdentityStore identity;
   late MemoryDocStore db;
@@ -503,6 +533,144 @@ void main() {
         async.flushMicrotasks();
         expect(error, isA<StateError>());
         expect(b.signed, hasLength(1));
+      });
+    });
+  });
+
+  group('watching the inbox while locked', () {
+    late List<FakeWatch> watches;
+    late List<String> order;
+
+    RelayService makeWatched() {
+      watches = [];
+      order = [];
+      return RelayService(
+        identity: identity,
+        db: db,
+        random: Random(0),
+        backendFactory: (id, urls) {
+          order.add('open main');
+          final b = FakeBackend(urls);
+          backends.add(b);
+          return b;
+        },
+        watchFactory: (urls) {
+          order.add('open watch');
+          final w = FakeWatch(urls);
+          watches.add(w);
+          return w;
+        },
+      );
+    }
+
+    test('lock: key-less watch on the same relays, after the main backend '
+        'is gone', () {
+      fakeAsync((async) {
+        final s = makeWatched();
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        final pubkey = identity.identity!.publicKey;
+
+        s.watchInbox();
+        expect(s.watching, isTrue);
+        identity.forget();
+        async.flushMicrotasks();
+
+        expect(backends.single.disposed, isTrue);
+        expect(watches.single.relays, defaultRelays);
+        expect(watches.single.watched, [pubkey]);
+        expect(s.relays, isEmpty, reason: 'the app sees no account online');
+      });
+    });
+
+    test('each gift wrap reported once, even from several relays', () {
+      fakeAsync((async) {
+        final s = makeWatched();
+        final seen = <String>[];
+        s.sealedArrivals.listen(seen.add);
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        s.watchInbox();
+        identity.forget();
+        async.flushMicrotasks();
+
+        final w = watches.single;
+        w.wraps.add(wrap('a'));
+        w.wraps.add(wrap('a'));
+        w.wraps.add(wrap('b'));
+        async.flushMicrotasks();
+        expect(seen, [wrap('a').id, wrap('b').id]);
+      });
+    });
+
+    test('relays connecting later get the REQ; offline retries', () {
+      fakeAsync((async) {
+        final s = makeWatched();
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        s.watchInbox();
+        identity.forget();
+        async.flushMicrotasks();
+        final w = watches.single;
+        expect(w.watched, hasLength(1));
+
+        w.emit({defaultRelays[0]: true});
+        expect(w.watched, hasLength(2));
+        w.emit({defaultRelays[0]: true});
+        expect(w.watched, hasLength(2), reason: 'nothing new');
+
+        w.emit({defaultRelays[0]: false});
+        async.elapse(const Duration(minutes: 2));
+        expect(w.reconnects, greaterThan(0));
+      });
+    });
+
+    test('unlock: watch closed before the main backend reopens', () {
+      fakeAsync((async) {
+        final s = makeWatched();
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        s.watchInbox();
+        identity.forget();
+        async.flushMicrotasks();
+
+        identity.hydrate();
+        async.flushMicrotasks();
+        expect(s.watching, isFalse);
+        expect(watches.single.disposed, isTrue);
+        expect(order, ['open main', 'open watch', 'open main']);
+        expect(backends, hasLength(2));
+      });
+    });
+
+    test('stopWatching (panic while locked) closes it for good', () {
+      fakeAsync((async) {
+        final s = makeWatched();
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        s.watchInbox();
+        identity.forget();
+        async.flushMicrotasks();
+
+        s.stopWatching();
+        identity.wipe();
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(minutes: 5));
+        expect(watches.single.disposed, isTrue);
+        expect(watches, hasLength(1));
+        expect(watches.single.reconnects, 0);
+      });
+    });
+
+    test('no watch unless asked before the identity goes', () {
+      fakeAsync((async) {
+        makeWatched();
+        identity.restore(vector12);
+        async.flushMicrotasks();
+        identity.forget();
+        async.flushMicrotasks();
+        expect(watches, isEmpty);
       });
     });
   });

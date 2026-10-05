@@ -160,6 +160,76 @@ class NdkRelayBackend implements RelayBackend {
   }
 }
 
+/// What [RelayService] needs while the app lock holds: no account, nothing
+/// to sign or decrypt with — only the public key every sender already knows.
+abstract class WatchBackend {
+  Stream<Map<String, bool>> get connectivity;
+  Future<void> reconnect();
+
+  /// Gift wraps p-tagged to [pubkey] reaching the relays from now on: none
+  /// of what they already hold (a gift wrap's date is randomized up to two
+  /// days back, so `since` can't tell new from old).
+  Stream<Nip01Event> newGiftWraps(String pubkey);
+  Future<void> dispose();
+}
+
+typedef WatchBackendFactory = WatchBackend Function(List<String> relays);
+
+class NdkWatchBackend implements WatchBackend {
+  NdkWatchBackend(List<String> relays)
+    : _relays = relays,
+      _ndk = Ndk(
+        NdkConfig(
+          cache: MemCacheManager(),
+          eventVerifier: Bip340EventVerifier(),
+          bootstrapRelays: relays,
+          logLevel: LogLevel.off,
+          userAgent: 'nostr-client',
+        ),
+      );
+
+  final Ndk _ndk;
+  final List<String> _relays;
+
+  @override
+  Stream<Map<String, bool>> get connectivity => _ndk
+      .connectivity
+      .relayConnectivityChanges
+      .map((list) => {for (final r in list) r.url: r.isConnected});
+
+  @override
+  Future<void> reconnect() => _ndk.connectivity.tryReconnect();
+
+  @override
+  Stream<Nip01Event> newGiftWraps(String pubkey) {
+    final response = _ndk.requests.subscription(
+      // limit 0: no stored events, only live ones.
+      filter: Filter(kinds: const [1059], pTags: [pubkey], limit: 0),
+      explicitRelays: _relays,
+    );
+    final controller = StreamController<Nip01Event>();
+    StreamSubscription<Nip01Event>? inner;
+    controller.onListen = () {
+      inner = response.stream.listen(
+        controller.add,
+        onError: controller.addError,
+      );
+    };
+    controller.onCancel = () async {
+      await inner?.cancel();
+      await _ndk.requests.closeSubscription(response.requestId);
+    };
+    return controller.stream;
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _ndk.destroy();
+    _ndk.relays.globalState.relays.clear();
+    _ndk.relays.globalState.blockedRelays.clear();
+  }
+}
+
 /// Keeps the app connected to its relays while an identity exists, and
 /// carries gift wraps over them.
 class RelayService extends ChangeNotifier implements Transport {
@@ -167,6 +237,7 @@ class RelayService extends ChangeNotifier implements Transport {
     required IdentityStore identity,
     required DocStore db,
     RelayBackendFactory? backendFactory,
+    WatchBackendFactory? watchFactory,
     Random? random,
     this.settleTimeout = const Duration(seconds: 10),
     this.resubscribeDebounce = const Duration(seconds: 2),
@@ -174,6 +245,7 @@ class RelayService extends ChangeNotifier implements Transport {
   }) : _identity = identity,
        _db = db,
        _factory = backendFactory ?? NdkRelayBackend.new,
+       _watchFactory = watchFactory ?? NdkWatchBackend.new,
        _random = random ?? Random() {
     _identity.addListener(_syncWithIdentity);
     _syncWithIdentity();
@@ -185,6 +257,7 @@ class RelayService extends ChangeNotifier implements Transport {
   final IdentityStore _identity;
   final DocStore _db;
   final RelayBackendFactory _factory;
+  final WatchBackendFactory _watchFactory;
   final Random _random;
   final Duration settleTimeout;
 
@@ -229,10 +302,131 @@ class RelayService extends ChangeNotifier implements Transport {
     final id = _identity.identity;
     if (id == null) {
       _stop();
+      final watch = _watch;
+      if (watch != null && _watchBackend == null) unawaited(_startWatch(watch));
     } else if (_backendPubkey != id.publicKey) {
+      stopWatching();
       _stop();
       _start(id);
     }
+  }
+
+  /// Completes once the last backend is torn down. ndk keeps connections in
+  /// a static shared by every instance, and destroying one closes them all:
+  /// a new backend must not connect before the old one is gone.
+  Future<void> _closing = Future.value();
+  int _closesPending = 0;
+
+  void _close(Future<void> Function() dispose) {
+    _closesPending++;
+    _closing = _closing
+        .then((_) => dispose())
+        .timeout(const Duration(seconds: 10))
+        .catchError((Object _) {})
+        .whenComplete(() => _closesPending--);
+  }
+
+  // --- Watching while locked ----------------------------------------------
+
+  (String, List<String>)? _watch;
+  WatchBackend? _watchBackend;
+  StreamSubscription<Map<String, bool>>? _watchConn;
+  StreamSubscription<Nip01Event>? _watchSub;
+  Timer? _watchRetry;
+  int _watchAttempt = 0;
+  Set<String> _watchConnected = {};
+  Set<String> _watchSubscribedOn = {};
+  final _seenSealed = <String>{};
+  final _sealed = StreamController<String>.broadcast();
+
+  /// Gift wrap ids reaching our inbox while the app is locked. Sealed: the
+  /// key to open them is gone from memory.
+  Stream<String> get sealedArrivals => _sealed.stream;
+
+  /// True from [watchInbox] until [stopWatching].
+  bool get watching => _watch != null;
+
+  /// Call right before the identity is forgotten (app lock): keeps listening
+  /// for gift wraps to our public key, without the account key. Memory only.
+  void watchInbox() {
+    final pubkey = _backendPubkey;
+    if (pubkey == null || _relays.isEmpty) return;
+    _watch = (pubkey, _relays.keys.toList());
+    notifyListeners();
+  }
+
+  void stopWatching() {
+    if (_watch == null) return;
+    _watch = null;
+    _watchRetry?.cancel();
+    _watchConn?.cancel();
+    _watchConn = null;
+    _watchSub?.cancel();
+    _watchSub = null;
+    _watchConnected = {};
+    _watchSubscribedOn = {};
+    _seenSealed.clear();
+    final backend = _watchBackend;
+    _watchBackend = null;
+    if (backend != null) _close(backend.dispose);
+    notifyListeners();
+  }
+
+  Future<void> _startWatch((String, List<String>) watch) async {
+    if (_closesPending > 0) await _closing;
+    if (_watch != watch || _watchBackend != null || _backend != null) return;
+    final backend = _watchFactory(watch.$2);
+    _watchBackend = backend;
+    _watchAttempt = 0;
+    _watchConn = backend.connectivity.listen((update) {
+      _watchConnected = {
+        ..._watchConnected.where((u) => update[u] != false),
+        for (final e in update.entries)
+          if (e.value && watch.$2.contains(e.key)) e.key,
+      };
+      _watchSubscribedOn = _watchSubscribedOn.intersection(_watchConnected);
+      if (_watchConnected.difference(_watchSubscribedOn).isNotEmpty) {
+        _watchSubscribe(backend, watch.$1);
+      }
+      if (_watchConnected.isEmpty) {
+        _watchRetryLater(backend);
+      } else {
+        _watchAttempt = 0;
+        _watchRetry?.cancel();
+      }
+    });
+    _watchSubscribe(backend, watch.$1);
+    _watchRetryLater(backend);
+  }
+
+  /// Same as [_subscribe]: a REQ isn't replayed to relays that connect
+  /// later. limit 0 makes a new one free: nothing old comes back.
+  void _watchSubscribe(WatchBackend backend, String pubkey) {
+    unawaited(_watchSub?.cancel());
+    _watchSubscribedOn = {..._watchConnected};
+    _watchSub = backend
+        .newGiftWraps(pubkey)
+        .listen(
+          (w) {
+            if (_watchBackend == backend && _seenSealed.add(w.id)) {
+              _sealed.add(w.id);
+            }
+          },
+          onError: (Object e) {
+            if (kDebugMode) debugPrint('WHISPER_RELAY watch error $e');
+          },
+        );
+  }
+
+  void _watchRetryLater(WatchBackend backend) {
+    if (_watchRetry?.isActive ?? false) return;
+    _watchRetry = Timer(retryDelay(_watchAttempt++, random: _random), () async {
+      if (_watchBackend != backend || _watchConnected.isNotEmpty) return;
+      await backend.reconnect();
+      if (_watchBackend == backend && _watchConnected.isEmpty) {
+        _watchRetryLater(backend);
+      }
+    });
   }
 
   /// A saved list without `auto` was written by the user's relay editor.
@@ -249,6 +443,7 @@ class RelayService extends ChangeNotifier implements Transport {
     _backendPubkey = id.publicKey;
     final urls = await _loadRelayUrls();
     final downtime = await _db.getDoc('meta', 'relay_downtime');
+    if (_closesPending > 0) await _closing;
     // Identity changed or was wiped while loading.
     if (_backendPubkey != id.publicKey) return;
     _downtime = {
@@ -438,7 +633,7 @@ class RelayService extends ChangeNotifier implements Transport {
     final backend = _backend;
     _backend = null;
     _backendPubkey = null;
-    if (backend != null) unawaited(backend.dispose());
+    if (backend != null) _close(backend.dispose);
     if (_relays.isNotEmpty) {
       _relays = const {};
       notifyListeners();
@@ -613,8 +808,10 @@ class RelayService extends ChangeNotifier implements Transport {
   @override
   void dispose() {
     _identity.removeListener(_syncWithIdentity);
+    stopWatching();
     _stop();
     _incoming.close();
+    _sealed.close();
     super.dispose();
   }
 }
