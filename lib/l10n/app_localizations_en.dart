@@ -1043,4 +1043,68 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get updateDirectWarning =>
       'Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way.';
+
+  @override
+  String get channelHistory => 'Past posts';
+
+  @override
+  String get channelHistoryAll => 'Full history';
+
+  @override
+  String get channelHistoryAllBody =>
+      'New followers see every earlier post. Your phone keeps them and sends them to the relays again once a day.';
+
+  @override
+  String get channelHistoryJoin => 'From when they follow';
+
+  @override
+  String get channelHistoryJoinBody =>
+      'New followers only see posts published after they follow. Earlier posts aren\'t sent again and fade from the relays.';
+
+  @override
+  String get channelPostEdit => 'Edit';
+
+  @override
+  String get channelPostEditing => 'Editing a post';
+
+  @override
+  String channelPostEdited(String date) {
+    return 'edited $date';
+  }
+
+  @override
+  String get groupCopyLink => 'Copy group link';
+
+  @override
+  String get groupLinkCopied => 'Group link copied';
+
+  @override
+  String get groupLinkNotMember =>
+      'You\'re not in this group. Only its admin can add you.';
+
+  @override
+  String get pinMessage => 'Pin';
+
+  @override
+  String get unpinMessage => 'Unpin';
+
+  @override
+  String get pinnedMessage => 'Pinned message';
+
+  @override
+  String get chatJumpLatest => 'Latest messages';
+
+  @override
+  String get chatNewMessages => 'New messages';
+
+  @override
+  String get replyAction => 'Reply';
+
+  @override
+  String replyingTo(String name) {
+    return 'Replying to $name';
+  }
+
+  @override
+  String get messageUnavailable => 'Message not available';
 }

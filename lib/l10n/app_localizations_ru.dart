@@ -1057,4 +1057,68 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get updateDirectWarning =>
       'Быстрее, но твой интернет-провайдер и GitHub увидят, что этот телефон загружает Whisper. Не делай так там, где следят за Whisper или Tor. Файл проверяется так же.';
+
+  @override
+  String get channelHistory => 'Прошлые посты';
+
+  @override
+  String get channelHistoryAll => 'Вся история';
+
+  @override
+  String get channelHistoryAllBody =>
+      'Новые подписчики видят все прошлые посты. Твой телефон хранит их и раз в день снова отправляет на ретрансляторы.';
+
+  @override
+  String get channelHistoryJoin => 'С момента подписки';
+
+  @override
+  String get channelHistoryJoinBody =>
+      'Новые подписчики видят только посты, опубликованные после подписки. Прошлые посты не отправляются снова и постепенно исчезают с ретрансляторов.';
+
+  @override
+  String get channelPostEdit => 'Изменить';
+
+  @override
+  String get channelPostEditing => 'Редактирование поста';
+
+  @override
+  String channelPostEdited(String date) {
+    return 'изменено $date';
+  }
+
+  @override
+  String get groupCopyLink => 'Копировать ссылку на группу';
+
+  @override
+  String get groupLinkCopied => 'Ссылка на группу скопирована';
+
+  @override
+  String get groupLinkNotMember =>
+      'Ты не в этой группе. Добавить тебя может только её админ.';
+
+  @override
+  String get pinMessage => 'Закрепить';
+
+  @override
+  String get unpinMessage => 'Открепить';
+
+  @override
+  String get pinnedMessage => 'Закреплённое сообщение';
+
+  @override
+  String get chatJumpLatest => 'Последние сообщения';
+
+  @override
+  String get chatNewMessages => 'Новые сообщения';
+
+  @override
+  String get replyAction => 'Ответить';
+
+  @override
+  String replyingTo(String name) {
+    return 'Ответ для $name';
+  }
+
+  @override
+  String get messageUnavailable => 'Сообщение недоступно';
 }

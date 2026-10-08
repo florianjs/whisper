@@ -494,5 +494,34 @@
   "iosBackgroundNote": "On iPhone, messages arrive while Whisper is open: iOS doesn't let apps keep a private connection in the background. Relays keep messages for at least two days.",
   "updateViaTor": "Download through Tor",
   "updateViaTorBody": "Slower, but nobody can see this phone fetching Whisper.",
-  "updateDirectWarning": "Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way."
+  "updateDirectWarning": "Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way.",
+  "channelHistory": "Past posts",
+  "channelHistoryAll": "Full history",
+  "channelHistoryAllBody": "New followers see every earlier post. Your phone keeps them and sends them to the relays again once a day.",
+  "channelHistoryJoin": "From when they follow",
+  "channelHistoryJoinBody": "New followers only see posts published after they follow. Earlier posts aren't sent again and fade from the relays.",
+  "channelPostEdit": "Edit",
+  "channelPostEditing": "Editing a post",
+  "channelPostEdited": "edited {date}",
+  "@channelPostEdited": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "groupCopyLink": "Copy group link",
+  "groupLinkCopied": "Group link copied",
+  "groupLinkNotMember": "You're not in this group. Only its admin can add you.",
+  "pinMessage": "Pin",
+  "unpinMessage": "Unpin",
+  "pinnedMessage": "Pinned message",
+  "chatJumpLatest": "Latest messages",
+  "chatNewMessages": "New messages",
+  "replyAction": "Reply",
+  "replyingTo": "Replying to {name}",
+  "messageUnavailable": "Message not available",
+  "@replyingTo": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  }
 }

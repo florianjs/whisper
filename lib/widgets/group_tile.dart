@@ -44,7 +44,9 @@ class GroupTile extends StatelessWidget {
     } else if (last == null) {
       preview = l.groupMembers(entry.state.members.length);
     } else {
-      final text = hidden ? '•••••' : last.text;
+      final text = hidden
+          ? '•••••'
+          : (last.image != null ? l.photoPreview : last.text);
       preview = last.fromMe
           ? l.youPrefix(text)
           : l.groupNamePrefix(names.displayName(last.peer), text);

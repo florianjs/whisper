@@ -35,6 +35,7 @@ class ChannelRelayPool implements ChannelTransport {
   final _events = StreamController<Nip01Event>.broadcast();
   final Map<String, _Conn> _conns = {};
   Set<String> _watched = const {};
+  Set<String> _probes = const {};
   List<String> _extra = const [];
   bool _disposed = false;
 
@@ -48,8 +49,13 @@ class ChannelRelayPool implements ChannelTransport {
       _conns.entries.where((e) => e.value.socket != null).map((e) => e.key);
 
   @override
-  void watchChannels(Set<String> channelPks, {List<String> relays = const []}) {
+  void watchChannels(
+    Set<String> channelPks, {
+    List<String> relays = const [],
+    Set<String> probes = const {},
+  }) {
     _watched = {...channelPks};
+    _probes = probes.difference(_watched);
     _extra = [...relays];
     _sync();
   }
@@ -64,7 +70,7 @@ class ChannelRelayPool implements ChannelTransport {
 
   void _sync() {
     if (_disposed) return;
-    final wanted = _watched.isEmpty
+    final wanted = _watched.isEmpty && _probes.isEmpty
         ? <String>{}
         : {..._ourRelays(), for (final r in _extra) ?normalizeRelayUrl(r)};
     for (final url in _conns.keys.toList()) {
@@ -76,12 +82,29 @@ class ChannelRelayPool implements ChannelTransport {
     }
   }
 
+  /// Relays cap the filters of one REQ (NIP-11 `max_filters`, often 10).
+  static const maxPostFilters = 7;
+
+  /// A filter per channel, up to [maxPostFilters]: with a shared limit, one
+  /// busy channel would push the others' history out of the reply. Beyond
+  /// that, channels share filters.
   List<Object> get _filters => [
-    {
-      'kinds': [Channel.kindPost, Channel.kindMeta],
-      'authors': (_watched.toList()..sort()),
-      'limit': 500,
-    },
+    for (final group in spreadChannels(_watched, maxPostFilters))
+      {
+        'kinds': [
+          Channel.kindPost,
+          Channel.kindMeta,
+          Channel.kindEdit,
+          Channel.kindPin,
+        ],
+        'authors': group,
+        'limit': 500,
+      },
+    if (_probes.isNotEmpty)
+      {
+        'kinds': [Channel.kindMeta],
+        'authors': (_probes.toList()..sort()),
+      },
     {
       'kinds': [Channel.kindReaction],
       '#p': (_watched.toList()..sort()),
@@ -121,6 +144,16 @@ class ChannelRelayPool implements ChannelTransport {
     _conns.clear();
     _events.close();
   }
+}
+
+/// [pks] dealt into at most [groups] lists, in a stable order.
+List<List<String>> spreadChannels(Set<String> pks, int groups) {
+  final sorted = pks.toList()..sort();
+  final n = sorted.length < groups ? sorted.length : groups;
+  return [
+    for (var g = 0; g < n; g++)
+      [for (var i = g; i < sorted.length; i += n) sorted[i]],
+  ];
 }
 
 class _Conn {

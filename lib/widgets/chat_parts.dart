@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../models/message.dart';
 import '../theme/tokens.dart';
 import 'chat_image.dart';
+import 'link_text.dart';
 
 // Building blocks shared by 1:1 chats, groups and channels.
 
@@ -96,6 +97,8 @@ class ChatBubble extends StatelessWidget {
     required this.onRetry,
     this.blur = false,
     this.sender,
+    this.onActions,
+    this.quote,
   });
 
   final Message message;
@@ -106,6 +109,13 @@ class ChatBubble extends StatelessWidget {
 
   /// Author label above incoming group bubbles (first of a run only).
   final Widget? sender;
+
+  /// The message this one replies to ([QuoteBlock]), shown above the text.
+  final Widget? quote;
+
+  /// Message menu (reply, pin): long-press, or double-tap when blurred, where a
+  /// long-press reveals the text.
+  final VoidCallback? onActions;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +133,8 @@ class ChatBubble extends StatelessWidget {
 
     final bubble = GestureDetector(
       onTap: failed ? onRetry : null,
+      onLongPress: blur ? null : onActions,
+      onDoubleTap: blur ? onActions : null,
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.78,
@@ -160,13 +172,14 @@ class ChatBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
+            ?quote,
             if (image)
               ChatImage(message: message)
             else
               Align(
                 alignment: Alignment.centerLeft,
                 widthFactor: 1,
-                child: Text(
+                child: LinkText(
                   message.text,
                   style: context.text.bodyLarge?.copyWith(
                     color: fg,
@@ -445,7 +458,7 @@ class ChatComposer extends StatelessWidget {
   final FocusNode focus;
   final bool canSend;
 
-  /// Null hides the attach button (group chats are text only in v1).
+  /// Null hides the attach button.
   final VoidCallback? onAttach;
 
   /// Placeholder; defaults to the chat one.
@@ -493,6 +506,124 @@ class ChatComposer extends StatelessWidget {
 }
 
 /// Blurred until pressed and held; blurs again on release.
+/// The quoted message inside a reply bubble. Tap: scroll to it.
+class QuoteBlock extends StatelessWidget {
+  const QuoteBlock({
+    super.key,
+    required this.author,
+    required this.preview,
+    required this.mine,
+    this.onTap,
+  });
+
+  final String author;
+  final String preview;
+
+  /// Inside one of my bubbles (accent background).
+  final bool mine;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final fg = mine ? c.onAccent : c.fg;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+        decoration: BoxDecoration(
+          color: (mine ? Colors.white : c.accent).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border(
+            left: BorderSide(color: mine ? c.onAccent : c.accent, width: 3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              author,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: mine ? c.onAccent : c.accent,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              preview,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: fg.withValues(alpha: 0.8),
+                fontSize: 13.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Above the composer while a reply is being written.
+class ReplyBar extends StatelessWidget {
+  const ReplyBar({
+    super.key,
+    required this.author,
+    required this.preview,
+    required this.onCancel,
+  });
+
+  final String author;
+  final String preview;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final c = context.c;
+    return Container(
+      color: c.surface,
+      padding: const EdgeInsets.fromLTRB(16, 6, 4, 6),
+      child: Row(
+        children: [
+          Icon(Icons.reply_rounded, size: 18, color: c.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l.replyingTo(author),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.labelLarge?.copyWith(color: c.accent),
+                ),
+                Text(
+                  preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.bodySmall?.copyWith(color: c.muted),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: l.cancel,
+            onPressed: onCancel,
+            icon: const Icon(Icons.close_rounded, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HoldToReveal extends StatefulWidget {
   const _HoldToReveal({required this.child});
 
@@ -544,7 +675,7 @@ class SecureChatComposer extends StatelessWidget {
   final bool canSend;
   final VoidCallback onTap;
 
-  /// Null hides the attach button (group chats are text only in v1).
+  /// Null hides the attach button.
   final VoidCallback? onAttach;
 
   /// Placeholder; defaults to the chat one.

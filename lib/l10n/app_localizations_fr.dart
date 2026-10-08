@@ -1050,4 +1050,68 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get updateDirectWarning =>
       'Plus rapide, mais votre fournisseur d\'accès et GitHub verront ce téléphone télécharger Whisper. À éviter là où Whisper ou Tor sont surveillés. Le fichier est vérifié de la même façon.';
+
+  @override
+  String get channelHistory => 'Anciens posts';
+
+  @override
+  String get channelHistoryAll => 'Historique complet';
+
+  @override
+  String get channelHistoryAllBody =>
+      'Les nouveaux abonnés voient tous les posts précédents. Ton téléphone les garde et les renvoie aux relais une fois par jour.';
+
+  @override
+  String get channelHistoryJoin => 'À partir de leur arrivée';
+
+  @override
+  String get channelHistoryJoinBody =>
+      'Les nouveaux abonnés ne voient que les posts publiés après leur arrivée. Les anciens ne sont pas renvoyés et disparaissent peu à peu des relais.';
+
+  @override
+  String get channelPostEdit => 'Modifier';
+
+  @override
+  String get channelPostEditing => 'Modification d\'un post';
+
+  @override
+  String channelPostEdited(String date) {
+    return 'modifié le $date';
+  }
+
+  @override
+  String get groupCopyLink => 'Copier le lien du groupe';
+
+  @override
+  String get groupLinkCopied => 'Lien du groupe copié';
+
+  @override
+  String get groupLinkNotMember =>
+      'Tu ne fais pas partie de ce groupe. Seul son admin peut t\'ajouter.';
+
+  @override
+  String get pinMessage => 'Épingler';
+
+  @override
+  String get unpinMessage => 'Désépingler';
+
+  @override
+  String get pinnedMessage => 'Message épinglé';
+
+  @override
+  String get chatJumpLatest => 'Derniers messages';
+
+  @override
+  String get chatNewMessages => 'Nouveaux messages';
+
+  @override
+  String get replyAction => 'Répondre';
+
+  @override
+  String replyingTo(String name) {
+    return 'Réponse à $name';
+  }
+
+  @override
+  String get messageUnavailable => 'Message indisponible';
 }

@@ -12,11 +12,42 @@ import '../theme/tokens.dart';
 import 'app_button.dart';
 import 'ui.dart';
 
-/// Pick → anonymize → preview (exactly what will be sent) → send.
+/// Gallery or camera, then [pickAndSendImage].
+Future<void> attachImage(
+  BuildContext context,
+  Future<void> Function(({Uint8List bytes, int width, int height})) send,
+) async {
+  final l = AppLocalizations.of(context);
+  final source = await showAppSheet<ImageSource>(
+    context,
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SheetAction(
+            icon: Icons.photo_library_outlined,
+            title: l.photoFromGallery,
+            onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+          ),
+          SheetAction(
+            icon: Icons.photo_camera_outlined,
+            title: l.photoFromCamera,
+            onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (source == null || !context.mounted) return;
+  await pickAndSendImage(context, source, send);
+}
+
+/// Pick → anonymize → preview (exactly what will be sent) → [send].
 Future<void> pickAndSendImage(
   BuildContext context,
-  String peer,
   ImageSource source,
+  Future<void> Function(({Uint8List bytes, int width, int height})) send,
 ) async {
   final l = AppLocalizations.of(context);
   final store = context.read<MessageStore>();
@@ -38,7 +69,7 @@ Future<void> pickAndSendImage(
     return;
   }
   if (!context.mounted) return;
-  final send = await showAppSheet<bool>(
+  final ok = await showAppSheet<bool>(
     context,
     scrollable: true,
     builder: (sheetContext) => SingleChildScrollView(
@@ -88,7 +119,7 @@ Future<void> pickAndSendImage(
       ),
     ),
   );
-  if (send == true) await store.sendImage(peer, prepared);
+  if (ok == true) await send(prepared);
 }
 
 /// Image bubble content: the photo, or a placeholder with chunk progress.
@@ -107,7 +138,12 @@ class ChatImage extends StatelessWidget {
     final width = maxW;
     final height = (width / aspect).clamp(120.0, maxW * 1.4);
     final progress = store.imageProgress(message);
-    final pendingRequest = !message.fromMe && !store.isAccepted(message.peer);
+    // A 1:1 request: nothing rendered before I accept. Groups gate it on
+    // their own (only accepted groups store photos).
+    final pendingRequest =
+        message.groupId == null &&
+        !message.fromMe &&
+        !store.isAccepted(message.peer);
 
     final c = context.c;
     Widget placeholder(Widget child) => Container(

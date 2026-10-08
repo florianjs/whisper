@@ -20,6 +20,7 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
   final _name = TextEditingController();
   final _about = TextEditingController();
   bool _public = true;
+  bool _fullHistory = true;
   bool _busy = false;
 
   @override
@@ -41,6 +42,7 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
       name: _name.text,
       about: _about.text,
       public: _public,
+      fullHistory: _fullHistory,
       relays: context.read<RelayService>().relays.keys.toList(),
     );
     if (!mounted) return;
@@ -106,7 +108,7 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
                     onChanged: (v) => setState(() => _public = v ?? true),
                     child: Column(
                       children: [
-                        _VisibilityOption(
+                        ChannelOption(
                           value: true,
                           selected: _public,
                           icon: Icons.public_rounded,
@@ -115,7 +117,7 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
                           onTap: () => setState(() => _public = true),
                         ),
                         const SizedBox(height: 10),
-                        _VisibilityOption(
+                        ChannelOption(
                           value: false,
                           selected: !_public,
                           icon: Icons.lock_rounded,
@@ -125,6 +127,18 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 10),
+                    child: Text(
+                      l.channelHistory,
+                      style: context.text.titleSmall?.copyWith(color: c.muted),
+                    ),
+                  ),
+                  ChannelHistoryChoice(
+                    fullHistory: _fullHistory,
+                    onChanged: (v) => setState(() => _fullHistory = v),
                   ),
                   const SizedBox(height: 16),
                   NoticeCard(text: l.channelAdminNote, icon: Icons.key_rounded),
@@ -149,9 +163,52 @@ class _NewChannelScreenState extends State<NewChannelScreen> {
   }
 }
 
-/// Selectable card for public / private, with its radio.
-class _VisibilityOption extends StatelessWidget {
-  const _VisibilityOption({
+/// Full history / from when they follow, as two [ChannelOption]s.
+class ChannelHistoryChoice extends StatelessWidget {
+  const ChannelHistoryChoice({
+    super.key,
+    required this.fullHistory,
+    required this.onChanged,
+  });
+
+  final bool fullHistory;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return RadioGroup<bool>(
+      groupValue: fullHistory,
+      onChanged: (v) => onChanged(v ?? true),
+      child: Column(
+        children: [
+          ChannelOption(
+            value: true,
+            selected: fullHistory,
+            icon: Icons.history_rounded,
+            title: l.channelHistoryAll,
+            body: l.channelHistoryAllBody,
+            onTap: () => onChanged(true),
+          ),
+          const SizedBox(height: 10),
+          ChannelOption(
+            value: false,
+            selected: !fullHistory,
+            icon: Icons.update_rounded,
+            title: l.channelHistoryJoin,
+            body: l.channelHistoryJoinBody,
+            onTap: () => onChanged(false),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Selectable card for a channel setting, with its radio.
+class ChannelOption extends StatelessWidget {
+  const ChannelOption({
+    super.key,
     required this.value,
     required this.selected,
     required this.icon,

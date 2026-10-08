@@ -12,14 +12,17 @@ import '../widgets/channel_tile.dart';
 import 'scan_screen.dart';
 
 class JoinChannelScreen extends StatefulWidget {
-  const JoinChannelScreen({super.key});
+  const JoinChannelScreen({super.key, this.code});
+
+  /// Prefilled invite (a link tapped in a message).
+  final String? code;
 
   @override
   State<JoinChannelScreen> createState() => _JoinChannelScreenState();
 }
 
 class _JoinChannelScreenState extends State<JoinChannelScreen> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.code);
 
   @override
   void initState() {

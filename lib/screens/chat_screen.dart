@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../data/message_store.dart';
@@ -13,6 +12,7 @@ import '../theme/tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/avatar.dart';
 import '../widgets/chat_image.dart';
+import '../widgets/chat_list.dart';
 import '../widgets/chat_parts.dart';
 import 'safety_number_screen.dart';
 import '../widgets/secure_keyboard.dart';
@@ -44,16 +44,35 @@ class _ChatScreenState extends State<ChatScreen> {
       .map((m) => m.id)
       .toSet();
 
+  /// Read marks live in MessageStore; kept to mark on the way out.
+  late final MessageStore _reads;
+
+  /// Oldest message from them I hadn't seen when opening: divider above it.
+  String? _firstUnread;
+
+  String get _readKey => 'dm:${widget.peer}';
+
   @override
   void initState() {
     super.initState();
     _initialIds;
+    _reads = context.read<MessageStore>();
+    final last = _reads.lastRead(_readKey);
+    if (last != null) {
+      _firstUnread = _reads
+          .messagesWith(widget.peer)
+          .where((m) => !m.fromMe && m.createdAt > last)
+          .firstOrNull
+          ?.id;
+    }
+    _reads.markRead(_readKey);
     _input.addListener(() => setState(() {}));
     _secure.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _reads.markRead(_readKey);
     _input.dispose();
     _focus.dispose();
     _secure.dispose();
@@ -65,13 +84,36 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _draft => _paranoiaKeyboard ? _secure.value : _input.text;
 
+  final _list = GlobalKey<ChatListState>();
+
+  /// The message being answered, quoted above the composer.
+  Message? _replyTo;
+
   Future<void> _send() async {
     final text = _draft;
     if (text.trim().isEmpty) return;
     HapticFeedback.selectionClick();
     _paranoiaKeyboard ? _secure.clear() : _input.clear();
-    await context.read<MessageStore>().send(widget.peer, text);
+    final replyTo = _replyTo?.id;
+    setState(() => _replyTo = null);
+    await context.read<MessageStore>().send(
+      widget.peer,
+      text,
+      replyTo: replyTo,
+    );
   }
+
+  void _reply(Message m) {
+    setState(() => _replyTo = m);
+    if (_paranoiaKeyboard) {
+      setState(() => _keyboardOpen = true);
+    } else {
+      _focus.requestFocus();
+    }
+  }
+
+  String _preview(Message m) =>
+      m.image != null ? AppLocalizations.of(context).photoPreview : m.text;
 
   Future<void> _rename() async {
     final l = AppLocalizations.of(context);
@@ -117,31 +159,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _attach() async {
-    final l = AppLocalizations.of(context);
     setState(() => _keyboardOpen = false);
-    final source = await showAppSheet<ImageSource>(
+    final store = context.read<MessageStore>();
+    await attachImage(
       context,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SheetAction(
-              icon: Icons.photo_library_outlined,
-              title: l.photoFromGallery,
-              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
-            ),
-            SheetAction(
-              icon: Icons.photo_camera_outlined,
-              title: l.photoFromCamera,
-              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
+      (prepared) => store.sendImage(widget.peer, prepared),
     );
-    if (source == null || !mounted) return;
-    await pickAndSendImage(context, widget.peer, source);
   }
 
   void _showMenu(String name) {
@@ -187,6 +210,22 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _quote(Message reply, Message? original, String name) {
+    final l = AppLocalizations.of(context);
+    return QuoteBlock(
+      mine: reply.fromMe,
+      author: original == null
+          ? ''
+          : original.fromMe
+          ? l.groupYou
+          : name,
+      preview: original == null ? l.messageUnavailable : _preview(original),
+      onTap: original == null
+          ? null
+          : () => _list.currentState?.jumpTo(original.id),
+    );
+  }
+
   void _openSecureKeyboard() {
     // Make sure the system keyboard is not up at the same time.
     FocusScope.of(context).unfocus();
@@ -204,6 +243,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final canSend = _draft.trim().isNotEmpty;
     final keyboardOpen = paranoia.inAppKeyboard && _keyboardOpen;
     final pending = store.stateOf(widget.peer) == ContactState.pending;
+    final pinned = store.pinnedWith(widget.peer);
+    final byId = {for (final m in messages) m.id: m};
 
     return PopScope(
       // Back closes our keyboard first, like the system one.
@@ -256,10 +297,25 @@ class _ChatScreenState extends State<ChatScreen> {
                             title: l.chatEncrypted,
                             body: l.chatEmpty(name),
                           )
-                        : ListView.builder(
-                            reverse: true,
+                        : ChatList(
+                            key: _list,
                             padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
                             itemCount: messages.length,
+                            idAt: (i) => messages[i].id,
+                            firstUnreadId: _firstUnread,
+                            pinned: pinned == null
+                                ? null
+                                : PinnedInfo(
+                                    id: pinned.id,
+                                    preview: paranoia.blurHistory
+                                        ? null
+                                        : pinned.image != null
+                                        ? l.photoPreview
+                                        : pinned.text,
+                                    onUnpin: pending
+                                        ? null
+                                        : () => store.pin(widget.peer, null),
+                                  ),
                             itemBuilder: (context, i) {
                               final m = messages[i];
                               // Group consecutive bubbles from the same side.
@@ -273,12 +329,32 @@ class _ChatScreenState extends State<ChatScreen> {
                                 animate: !_initialIds.contains(m.id),
                                 blur: paranoia.blurHistory,
                                 onRetry: () => store.retry(m.id),
+                                quote: m.replyTo == null
+                                    ? null
+                                    : _quote(m, byId[m.replyTo], name),
+                                onActions: pending
+                                    ? null
+                                    : () => showMessageActions(
+                                        context,
+                                        onReply: () => _reply(m),
+                                        pinned: pinned?.id == m.id,
+                                        onTogglePin: () => store.pin(
+                                          widget.peer,
+                                          pinned?.id == m.id ? null : m.id,
+                                        ),
+                                      ),
                               );
                             },
                           ),
                   ),
                 ),
               ),
+              if (_replyTo != null && !pending)
+                ReplyBar(
+                  author: _replyTo!.fromMe ? l.groupYou : name,
+                  preview: paranoia.blurHistory ? '' : _preview(_replyTo!),
+                  onCancel: () => setState(() => _replyTo = null),
+                ),
               if (pending)
                 _RequestBar(peer: widget.peer, name: name)
               else

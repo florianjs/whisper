@@ -21,7 +21,12 @@ abstract class ChannelTransport {
 
   /// Replaces the watched set. [relays]: extra relays the channels live on
   /// (from their invites), on top of ours. Kept alive across reconnects.
-  void watchChannels(Set<String> channelPks, {List<String> relays = const []});
+  /// [probes]: keys that may own a channel (restore): metadata only.
+  void watchChannels(
+    Set<String> channelPks, {
+    List<String> relays = const [],
+    Set<String> probes = const {},
+  });
 
   /// Throws if no relay accepted it.
   Future<void> publishChannelEvent(

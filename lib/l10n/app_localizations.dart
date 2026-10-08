@@ -1887,6 +1887,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Faster, but your internet provider and GitHub will see this phone downloading Whisper. Avoid it where Whisper or Tor is watched. The file is verified the same way.'**
   String get updateDirectWarning;
+
+  /// No description provided for @channelHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Past posts'**
+  String get channelHistory;
+
+  /// No description provided for @channelHistoryAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Full history'**
+  String get channelHistoryAll;
+
+  /// No description provided for @channelHistoryAllBody.
+  ///
+  /// In en, this message translates to:
+  /// **'New followers see every earlier post. Your phone keeps them and sends them to the relays again once a day.'**
+  String get channelHistoryAllBody;
+
+  /// No description provided for @channelHistoryJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'From when they follow'**
+  String get channelHistoryJoin;
+
+  /// No description provided for @channelHistoryJoinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'New followers only see posts published after they follow. Earlier posts aren\'t sent again and fade from the relays.'**
+  String get channelHistoryJoinBody;
+
+  /// No description provided for @channelPostEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get channelPostEdit;
+
+  /// No description provided for @channelPostEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing a post'**
+  String get channelPostEditing;
+
+  /// No description provided for @channelPostEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'edited {date}'**
+  String channelPostEdited(String date);
+
+  /// No description provided for @groupCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy group link'**
+  String get groupCopyLink;
+
+  /// No description provided for @groupLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Group link copied'**
+  String get groupLinkCopied;
+
+  /// No description provided for @groupLinkNotMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re not in this group. Only its admin can add you.'**
+  String get groupLinkNotMember;
+
+  /// No description provided for @pinMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get pinMessage;
+
+  /// No description provided for @unpinMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get unpinMessage;
+
+  /// No description provided for @pinnedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned message'**
+  String get pinnedMessage;
+
+  /// No description provided for @chatJumpLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest messages'**
+  String get chatJumpLatest;
+
+  /// No description provided for @chatNewMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'New messages'**
+  String get chatNewMessages;
+
+  /// No description provided for @replyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get replyAction;
+
+  /// No description provided for @replyingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Replying to {name}'**
+  String replyingTo(String name);
+
+  /// No description provided for @messageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Message not available'**
+  String get messageUnavailable;
 }
 
 class _AppLocalizationsDelegate

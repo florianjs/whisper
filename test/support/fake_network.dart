@@ -93,9 +93,14 @@ class FakeChannelTransport implements ChannelTransport {
       e.tags.any((t) => t.length > 1 && t[0] == 'p' && watched.contains(t[1]));
 
   @override
-  void watchChannels(Set<String> channelPks, {List<String> relays = const []}) {
-    final added = channelPks.difference(watched);
-    watched = {...channelPks};
+  void watchChannels(
+    Set<String> channelPks, {
+    List<String> relays = const [],
+    Set<String> probes = const {},
+  }) {
+    final all = {...channelPks, ...probes};
+    final added = all.difference(watched);
+    watched = all;
     if (added.isEmpty) return;
     // A new REQ gets the stored history, like a relay.
     for (final e in [...net.channelStored]) {

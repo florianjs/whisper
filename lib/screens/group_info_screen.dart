@@ -6,6 +6,8 @@ import '../data/group_store.dart';
 import '../data/identity_store.dart';
 import '../data/message_store.dart';
 import '../l10n/app_localizations.dart';
+import '../logic/secure_platform.dart';
+import '../logic/links.dart';
 import '../logic/group.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_button.dart';
@@ -117,6 +119,19 @@ class GroupInfoScreen extends StatelessWidget {
           const SizedBox(height: 24),
           SectionCard(
             children: [
+              SettingsTile(
+                icon: Icons.link_rounded,
+                title: l.groupCopyLink,
+                onTap: () async {
+                  // Opens the group for its members only; still, no reason
+                  // to leave it in the clipboard.
+                  await SecurePlatform.copySensitive(GroupLink.encode(groupId));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(l.groupLinkCopied)));
+                },
+              ),
               if (isAdmin && state.members.length < GroupState.maxMembers)
                 SettingsTile(
                   icon: Icons.person_add_alt_1_rounded,

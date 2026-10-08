@@ -9,7 +9,7 @@ import 'package:ndk/shared/nips/nip01/bip340.dart';
 import 'identity.dart';
 import 'relays.dart';
 
-/// Broadcast channels (v1): only the admin posts, viewers react.
+/// Broadcast channels (v1): only the admin posts (and edits), viewers react.
 ///
 /// A channel is a keypair (signs posts and metadata) plus a symmetric
 /// content key. Everything published is AES-256-GCM encrypted with that key,
@@ -18,6 +18,12 @@ import 'relays.dart';
 abstract final class Channel {
   static const kindPost = 4470;
   static const kindReaction = 4471;
+
+  /// A new text for one of the channel's posts; the latest one wins.
+  static const kindEdit = 4472;
+
+  /// The post pinned at the top of the channel; empty id unpins.
+  static const kindPin = 4473;
 
   /// Replaceable (NIP-01 10000–19999): relays keep the latest only.
   static const kindMeta = 14470;
@@ -197,7 +203,11 @@ Future<Nip01Event> signPost(
   createdAt: createdAt,
 );
 
-Future<Nip01Event> signMeta(ChannelKeys keys, ChannelMeta meta) async => _sign(
+Future<Nip01Event> signMeta(
+  ChannelKeys keys,
+  ChannelMeta meta, {
+  int? createdAt,
+}) async => _sign(
   keys.privateKey,
   keys.publicKey,
   Channel.kindMeta,
@@ -207,6 +217,39 @@ Future<Nip01Event> signMeta(ChannelKeys keys, ChannelMeta meta) async => _sign(
     Channel.kindMeta,
     meta.toJson(),
   ),
+  createdAt: createdAt,
+);
+
+/// The post id is inside the ciphertext, like for reactions.
+Future<Nip01Event> signEdit(
+  ChannelKeys keys,
+  String postId,
+  String text, {
+  int? createdAt,
+}) async => _sign(
+  keys.privateKey,
+  keys.publicKey,
+  Channel.kindEdit,
+  await encryptFor(keys.contentKey, keys.publicKey, Channel.kindEdit, {
+    'e': postId,
+    't': text,
+  }),
+  createdAt: createdAt,
+);
+
+/// [postId] null unpins. Inside the ciphertext, like for edits.
+Future<Nip01Event> signPin(
+  ChannelKeys keys,
+  String? postId, {
+  int? createdAt,
+}) async => _sign(
+  keys.privateKey,
+  keys.publicKey,
+  Channel.kindPin,
+  await encryptFor(keys.contentKey, keys.publicKey, Channel.kindPin, {
+    'e': postId ?? '',
+  }),
+  createdAt: createdAt,
 );
 
 /// [emoji] empty retracts. The post id is inside the ciphertext: relays only
@@ -237,6 +280,7 @@ class ChannelMeta {
     required this.name,
     this.about = '',
     required this.public,
+    this.fullHistory = true,
   });
 
   final String name;
@@ -246,26 +290,45 @@ class ChannelMeta {
   /// invites only go to contacts the admin picks.
   final bool public;
 
-  Map<String, Object?> toJson() => {'n': name, 'a': about, 'p': public};
+  /// True: new followers see past posts, which the admin's phone keeps on
+  /// the relays. False: followers only see what was posted after they
+  /// joined, and old posts fade from the relays. Not enforced by crypto:
+  /// the read key still opens whatever a relay kept.
+  final bool fullHistory;
+
+  Map<String, Object?> toJson() => {
+    'n': name,
+    'a': about,
+    'p': public,
+    'h': fullHistory,
+  };
 
   @override
   bool operator ==(Object other) =>
       other is ChannelMeta &&
       other.name == name &&
       other.about == about &&
-      other.public == public;
+      other.public == public &&
+      other.fullHistory == fullHistory;
 
   @override
-  int get hashCode => Object.hash(name, about, public);
+  int get hashCode => Object.hash(name, about, public, fullHistory);
 
+  /// Channels from before the choice existed have no 'h': full history.
   static ChannelMeta? fromJson(Map<String, Object?>? json) {
     if (json == null) return null;
     final name = json['n'], about = json['a'] ?? '', public = json['p'];
+    final history = json['h'] ?? true;
     if (name is! String || name.trim().isEmpty) return null;
     if (name.length > Channel.maxName) return null;
     if (about is! String || about.length > Channel.maxAbout) return null;
-    if (public is! bool) return null;
-    return ChannelMeta(name: name.trim(), about: about, public: public);
+    if (public is! bool || history is! bool) return null;
+    return ChannelMeta(
+      name: name.trim(),
+      about: about,
+      public: public,
+      fullHistory: history,
+    );
   }
 }
 
@@ -277,6 +340,7 @@ class ChannelInvite {
     required this.name,
     required this.public,
     this.relays = const [],
+    this.fullHistory = true,
   });
 
   final String channelPk;
@@ -284,6 +348,10 @@ class ChannelInvite {
   final String name;
   final bool public;
   final List<String> relays;
+
+  /// [ChannelMeta.fullHistory], known before the metadata arrives: no
+  /// glimpse of earlier posts in a "from when they follow" channel.
+  final bool fullHistory;
 
   static const prefix = 'whisper-channel:';
 
@@ -294,6 +362,7 @@ class ChannelInvite {
     'n': name,
     'p': public,
     'r': relays,
+    'h': fullHistory,
   };
 
   String encode() =>
@@ -304,7 +373,8 @@ class ChannelInvite {
     if (json is! Map) return null;
     final pk = json['pk'], key = json['k'], name = json['n'];
     final public = json['p'], relays = json['r'] ?? const [];
-    if (json['v'] != 1) return null;
+    final history = json['h'] ?? true;
+    if (json['v'] != 1 || history is! bool) return null;
     if (!Channel.isHex64(pk) || !Channel.isHex64(key)) return null;
     if (name is! String ||
         name.trim().isEmpty ||
@@ -321,6 +391,7 @@ class ChannelInvite {
         for (final r in relays)
           if (r is String) ?normalizeRelayUrl(r),
       ],
+      fullHistory: history,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:ndk/ndk.dart' show Nip01Event, Nip01EventModel;
@@ -7,6 +8,7 @@ import 'package:ndk/ndk.dart' show Nip01Event, Nip01EventModel;
 import '../logic/channel.dart';
 import '../logic/identity.dart';
 import '../logic/nip17.dart';
+import '../logic/pin.dart';
 import '../logic/transport.dart';
 import 'db.dart';
 import 'identity_store.dart';
@@ -27,6 +29,10 @@ class ChannelEntry {
     this.metaAt = 0,
     this.metaUnsent = false,
     this.invitedBy,
+    this.republishedAt = 0,
+    this.pin,
+    this.pinEvent,
+    this.pinUnsent = false,
   });
 
   final String pk;
@@ -50,6 +56,18 @@ class ChannelEntry {
   /// Contact who sent a private invite (local only).
   final String? invitedBy;
 
+  /// Mine, full history: when its posts were last re-sent to the relays.
+  final int republishedAt;
+
+  /// The admin's latest pin or unpin.
+  final Pin? pin;
+
+  /// Mine: the signed pin event, kept to re-send it with the history.
+  final Map<String, dynamic>? pinEvent;
+
+  /// Mine: [pinEvent] not accepted by any relay yet.
+  final bool pinUnsent;
+
   bool get mine => index != null;
 
   ChannelEntry copyWith({
@@ -57,6 +75,10 @@ class ChannelEntry {
     ChannelStatus? status,
     int? metaAt,
     bool? metaUnsent,
+    int? republishedAt,
+    Pin? pin,
+    Map<String, dynamic>? pinEvent,
+    bool? pinUnsent,
   }) => ChannelEntry(
     pk: pk,
     contentKey: contentKey,
@@ -68,6 +90,10 @@ class ChannelEntry {
     metaAt: metaAt ?? this.metaAt,
     metaUnsent: metaUnsent ?? this.metaUnsent,
     invitedBy: invitedBy,
+    republishedAt: republishedAt ?? this.republishedAt,
+    pin: pin ?? this.pin,
+    pinEvent: pinEvent ?? this.pinEvent,
+    pinUnsent: pinUnsent ?? this.pinUnsent,
   );
 
   ChannelInvite get invite => ChannelInvite(
@@ -76,6 +102,7 @@ class ChannelEntry {
     name: meta.name,
     public: meta.public,
     relays: relays,
+    fullHistory: meta.fullHistory,
   );
 
   Map<String, Object?> toJson() => {
@@ -89,6 +116,10 @@ class ChannelEntry {
     'metaAt': metaAt,
     'metaUnsent': metaUnsent,
     'invitedBy': invitedBy,
+    'republishedAt': republishedAt,
+    'pin': pin?.toJson(),
+    'pinEvent': pinEvent,
+    'pinUnsent': pinUnsent,
   };
 
   static ChannelEntry? fromJson(Map<String, dynamic> d) {
@@ -107,6 +138,10 @@ class ChannelEntry {
       metaAt: d['metaAt'] as int? ?? 0,
       metaUnsent: d['metaUnsent'] as bool? ?? false,
       invitedBy: d['invitedBy'] as String?,
+      republishedAt: d['republishedAt'] as int? ?? 0,
+      pin: Pin.fromJson((d['pin'] as Map?)?.cast<String, dynamic>()),
+      pinEvent: (d['pinEvent'] as Map?)?.cast<String, dynamic>(),
+      pinUnsent: d['pinUnsent'] as bool? ?? false,
     );
   }
 }
@@ -121,28 +156,55 @@ class ChannelPost {
     required this.createdAt,
     required this.status,
     this.event,
+    this.editedAt,
+    this.editEvent,
+    this.editUnsent = false,
   });
 
   final String id;
   final String channel;
+
+  /// The latest text: the original, or its newest edit.
   final String text;
   final int createdAt;
   final PostStatus status;
 
-  /// Mine, not yet accepted by a relay: the signed event, re-published as is
-  /// (same id) on retry.
+  /// Mine: the signed event, re-published as is (same id) on retry, and to
+  /// keep the channel's history on the relays.
   final Map<String, dynamic>? event;
 
-  DateTime get time => DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
+  /// created_at of the edit [text] comes from; null if never edited.
+  final int? editedAt;
 
-  ChannelPost withStatus(PostStatus s) => ChannelPost(
+  /// Mine: the signed edit behind [text], kept like [event].
+  final Map<String, dynamic>? editEvent;
+
+  /// Mine: [editEvent] not accepted by any relay yet.
+  final bool editUnsent;
+
+  DateTime get time => DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
+  bool get edited => editedAt != null;
+
+  ChannelPost copyWith({
+    PostStatus? status,
+    Map<String, dynamic>? event,
+    String? text,
+    int? editedAt,
+    Map<String, dynamic>? editEvent,
+    bool? editUnsent,
+  }) => ChannelPost(
     id: id,
     channel: channel,
-    text: text,
+    text: text ?? this.text,
     createdAt: createdAt,
-    status: s,
-    event: s == PostStatus.sent ? null : event,
+    status: status ?? this.status,
+    event: event ?? this.event,
+    editedAt: editedAt ?? this.editedAt,
+    editEvent: editEvent ?? this.editEvent,
+    editUnsent: editUnsent ?? this.editUnsent,
   );
+
+  ChannelPost withStatus(PostStatus s) => copyWith(status: s);
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -151,6 +213,9 @@ class ChannelPost {
     'createdAt': createdAt,
     'status': status.name,
     'event': event,
+    'editedAt': editedAt,
+    'editEvent': editEvent,
+    'editUnsent': editUnsent,
   };
 
   static ChannelPost fromJson(Map<String, dynamic> d) => ChannelPost(
@@ -160,6 +225,9 @@ class ChannelPost {
     createdAt: d['createdAt'] as int,
     status: PostStatus.values.byName(d['status'] as String),
     event: (d['event'] as Map?)?.cast<String, dynamic>(),
+    editedAt: d['editedAt'] as int?,
+    editEvent: (d['editEvent'] as Map?)?.cast<String, dynamic>(),
+    editUnsent: d['editUnsent'] as bool? ?? false,
   );
 }
 
@@ -215,15 +283,38 @@ class ChannelStore extends ChangeNotifier {
   /// Events already handled (several relays send the same one).
   final Set<String> _seen = {};
 
+  /// Mine: created_at of the last metadata signed, sent or still in flight.
+  final Map<String, int> _metaSignedAt = {};
+
+  /// Edits that arrived before their post (relays send in any order).
+  final Map<String, Nip01Event> _pendingEdits = {};
+
   bool get loaded => _loaded;
   ChannelEntry? channel(String pk) => _channels[pk];
 
   List<ChannelEntry> channelsWith(ChannelStatus status) =>
       _channels.values.where((c) => c.status == status).toList();
 
-  List<ChannelPost> postsIn(String pk) =>
-      _posts.values.where((p) => p.channel == pk).toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  /// "From when they join" channels: what was posted before I followed
+  /// stays hidden (the admin's own phone shows everything).
+  List<ChannelPost> postsIn(String pk) {
+    final c = _channels[pk];
+    final from = c == null || c.mine || c.meta.fullHistory ? 0 : c.since;
+    return _posts.values
+        .where((p) => p.channel == pk && p.createdAt >= from)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  /// The pinned post, if it's here and visible to me.
+  ChannelPost? pinnedIn(String pk) {
+    final id = _channels[pk]?.pin?.messageId;
+    if (id == null) return null;
+    for (final p in postsIn(pk)) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
 
   ChannelPost? lastIn(String pk) {
     final all = postsIn(pk);
@@ -265,6 +356,8 @@ class ChannelStore extends ChangeNotifier {
     _ownKeys.clear();
     _reactKeys.clear();
     _seen.clear();
+    _pendingEdits.clear();
+    _metaSignedAt.clear();
     _loaded = false;
     _me = id;
     if (id == null) _transport.watchChannels(const {});
@@ -324,7 +417,8 @@ class ChannelStore extends ChangeNotifier {
         if (c.status == ChannelStatus.active) c.pk,
     };
     _transport.watchChannels(
-      {...active, ..._ownKeys.keys},
+      active,
+      probes: _ownKeys.keys.toSet(),
       relays: {
         for (final c in _channels.values)
           if (c.status == ChannelStatus.active) ...c.relays,
@@ -339,6 +433,7 @@ class ChannelStore extends ChangeNotifier {
     required String name,
     String about = '',
     required bool public,
+    bool fullHistory = true,
     required List<String> relays,
   }) async {
     final me = _me;
@@ -347,6 +442,7 @@ class ChannelStore extends ChangeNotifier {
         name: name.trim(),
         about: about.trim(),
         public: public,
+        fullHistory: fullHistory,
       ).toJson(),
     );
     if (me == null || meta == null) return null;
@@ -378,7 +474,12 @@ class ChannelStore extends ChangeNotifier {
     return entry.pk;
   }
 
-  Future<void> editMeta(String pk, {String? name, String? about}) async {
+  Future<void> editMeta(
+    String pk, {
+    String? name,
+    String? about,
+    bool? fullHistory,
+  }) async {
     final me = _me;
     final c = _channels[pk];
     if (me == null || c == null || !c.mine) return;
@@ -387,6 +488,7 @@ class ChannelStore extends ChangeNotifier {
         name: (name ?? c.meta.name).trim(),
         about: (about ?? c.meta.about).trim(),
         public: c.meta.public,
+        fullHistory: fullHistory ?? c.meta.fullHistory,
       ).toJson(),
     );
     if (meta == null) return;
@@ -398,7 +500,11 @@ class ChannelStore extends ChangeNotifier {
   Future<void> _publishMeta(ChannelEntry c, Identity me) async {
     final keys = _ownKeys[c.pk]?.$2;
     if (keys == null) return;
-    final event = await signMeta(keys, c.meta);
+    // Replaceable: one from the same second as the last could lose to it.
+    final last = max(c.metaAt, _metaSignedAt[c.pk] ?? 0);
+    final at = last >= _now() ? last + 1 : _now();
+    _metaSignedAt[c.pk] = at;
+    final event = await signMeta(keys, c.meta, createdAt: at);
     try {
       await _transport.publishChannelEvent(event, relays: c.relays);
     } catch (_) {
@@ -466,14 +572,159 @@ class ChannelStore extends ChangeNotifier {
     await _publishPost(_posts[postId]!, me);
   }
 
+  /// Pins [postId] (null unpins) for every follower. Admin only.
+  Future<void> pin(String pk, String? postId) async {
+    final me = _me;
+    final c = _channels[pk];
+    final keys = _ownKeys[pk]?.$2;
+    if (me == null || c == null || !c.mine || keys == null) return;
+    if (postId != null && _posts[postId]?.channel != pk) return;
+    if (c.pin?.messageId == postId) return;
+    final last = c.pin?.at ?? 0;
+    final at = last >= _now() ? last + 1 : _now();
+    final event = await signPin(keys, postId, createdAt: at);
+    _seen.add(event.id);
+    final next = c.copyWith(
+      pin: Pin(postId, at),
+      pinEvent: Nip01EventModel.fromEntity(event).toJson(),
+      pinUnsent: true,
+    );
+    await _saveChannel(next, me);
+    await _publishPin(next, me);
+  }
+
+  Future<void> _publishPin(ChannelEntry c, Identity me) async {
+    final raw = c.pinEvent;
+    if (raw == null) return;
+    try {
+      await _transport.publishChannelEvent(
+        Nip01EventModel.fromJson(raw),
+        relays: c.relays,
+      );
+    } catch (_) {
+      return; // pinUnsent stays true: retried by retryFailed.
+    }
+    final now = _channels[c.pk];
+    if (now == null || now.pin?.at != c.pin?.at || _me != me) return;
+    await _saveChannel(now.copyWith(pinUnsent: false), me);
+  }
+
+  /// Replaces the text of one of my posts. Followers keep the latest edit.
+  Future<void> edit(String postId, String text) async {
+    final me = _me;
+    final p = _posts[postId];
+    final keys = p == null ? null : _ownKeys[p.channel]?.$2;
+    final trimmed = text.trim();
+    if (me == null ||
+        p == null ||
+        keys == null ||
+        _channels[p.channel]?.mine != true ||
+        trimmed.isEmpty ||
+        trimmed.length > Channel.maxPost ||
+        trimmed == p.text) {
+      return;
+    }
+    // Strictly newer than the edit it replaces, even within the same second.
+    final last = p.editedAt ?? p.createdAt;
+    final at = last >= _now() ? last + 1 : _now();
+    final event = await signEdit(keys, postId, trimmed, createdAt: at);
+    _seen.add(event.id);
+    final next = p.copyWith(
+      text: trimmed,
+      editedAt: at,
+      editEvent: Nip01EventModel.fromEntity(event).toJson(),
+      editUnsent: true,
+    );
+    await _putPost(next, me);
+    await _publishEdit(next, me);
+  }
+
+  Future<void> _publishEdit(ChannelPost p, Identity me) async {
+    final c = _channels[p.channel];
+    final raw = p.editEvent;
+    if (c == null || raw == null) return;
+    try {
+      await _transport.publishChannelEvent(
+        Nip01EventModel.fromJson(raw),
+        relays: c.relays,
+      );
+    } catch (_) {
+      return; // editUnsent stays true: retried by retryFailed.
+    }
+    final now = _posts[p.id];
+    // Edited again while this one was in flight: that one is unsent.
+    if (now == null || now.editedAt != p.editedAt) return;
+    await _putPost(now.copyWith(editUnsent: false), me);
+  }
+
   Future<void> retryFailed() async {
     final me = _me;
     if (me == null) return;
     for (final c in _channels.values.toList()) {
       if (c.mine && c.metaUnsent) await _publishMeta(c, me);
+      if (c.mine && c.pinUnsent) await _publishPin(c, me);
     }
     for (final p in _posts.values.toList()) {
-      if (p.event != null && p.status != PostStatus.sent) await retry(p.id);
+      if (p.event != null &&
+          p.status != PostStatus.sent &&
+          p.status != PostStatus.received) {
+        await retry(p.id);
+      }
+      final now = _posts[p.id];
+      if (now != null && now.editUnsent) await _publishEdit(now, me);
+    }
+    await _republishHistory(me);
+  }
+
+  /// How often a full-history channel's posts go back to the relays.
+  static const republishEvery = Duration(days: 1);
+
+  /// Full-history channels live on the relays only as long as relays keep
+  /// them: the admin's phone sends every post and edit again (same ids, so
+  /// a relay that still has them ignores them). Followers who join later
+  /// ask the relays, never the admin, who so never learns who joined.
+  Future<void> _republishHistory(Identity me) async {
+    if (_republishing) return;
+    _republishing = true;
+    try {
+      await _republishDue(me);
+    } finally {
+      _republishing = false;
+    }
+  }
+
+  bool _republishing = false;
+
+  Future<void> _republishDue(Identity me) async {
+    for (final c in _channels.values.toList()) {
+      if (!c.mine || !c.meta.fullHistory) continue;
+      if (_now() - c.republishedAt < republishEvery.inSeconds) continue;
+      final events = [
+        for (final p in postsIn(c.pk))
+          if (p.status == PostStatus.sent) ...[
+            ?p.event,
+            if (!p.editUnsent) ?p.editEvent,
+          ],
+        if (!c.pinUnsent) ?c.pinEvent,
+      ];
+      var accepted = 0;
+      for (final raw in events) {
+        if (_me != me) return;
+        try {
+          await _transport.publishChannelEvent(
+            Nip01EventModel.fromJson(raw),
+            relays: c.relays,
+          );
+          accepted++;
+        } catch (_) {}
+      }
+      // Offline all along: try again next time rather than in a day.
+      if (events.isNotEmpty && accepted == 0) continue;
+      final now = _channels[c.pk];
+      if (now == null || _me != me) return;
+      await _saveChannel(now.copyWith(republishedAt: _now()), me);
+      // The metadata is replaceable: a fresh one keeps it there too.
+      if (!now.metaUnsent) unawaited(_publishMeta(now, me));
     }
   }
 
@@ -601,6 +852,8 @@ class ChannelStore extends ChangeNotifier {
     switch (e.kind) {
       case Channel.kindPost:
       case Channel.kindMeta:
+      case Channel.kindEdit:
+      case Channel.kindPin:
         await _onAuthored(e, me);
       case Channel.kindReaction:
         await _onReaction(e, me);
@@ -646,16 +899,46 @@ class ChannelStore extends ChangeNotifier {
       return;
     }
 
+    if (e.kind == Channel.kindPin) {
+      final postId = clear['e'];
+      if (postId is! String ||
+          (postId.isNotEmpty && !Channel.isHex64(postId))) {
+        return;
+      }
+      final pin = Pin(postId.isEmpty ? null : postId, e.createdAt);
+      final now = _channels[e.pubKey];
+      if (now == null || !Pin.newer(now.pin, pin)) return;
+      await _saveChannel(
+        now.copyWith(
+          pin: pin,
+          pinEvent: own != null ? Nip01EventModel.fromEntity(e).toJson() : null,
+          pinUnsent: false,
+        ),
+        me,
+      );
+      return;
+    }
     final text = clear['t'];
     if (text is! String || text.isEmpty || text.length > Channel.maxPost) {
       return;
     }
+    if (e.kind == Channel.kindEdit) {
+      final postId = clear['e'];
+      if (!Channel.isHex64(postId)) return;
+      await _applyEdit(e, postId as String, text, own != null, me);
+      return;
+    }
+    // My own posts, seen again (restore, or from before posts were kept):
+    // keep the signed event, to keep the history on the relays.
+    final raw = own != null ? Nip01EventModel.fromEntity(e).toJson() : null;
     // A restored admin may see posts before metadata: keep them anyway.
     final existing = _posts[e.id];
     if (existing != null) {
       if (existing.status != PostStatus.sent &&
           existing.status != PostStatus.received) {
         await _putPost(existing.withStatus(PostStatus.sent), me);
+      } else if (raw != null && existing.event == null) {
+        await _putPost(existing.copyWith(event: raw), me);
       }
       return;
     }
@@ -666,6 +949,50 @@ class ChannelStore extends ChangeNotifier {
         text: text,
         createdAt: e.createdAt,
         status: own != null ? PostStatus.sent : PostStatus.received,
+        event: raw,
+      ),
+      me,
+    );
+    final pending = _pendingEdits.remove(e.id);
+    if (pending != null) {
+      _seen.remove(pending.id);
+      await _onEvent(pending);
+    }
+  }
+
+  /// The latest edit wins; one for a post of another channel never counts.
+  Future<void> _applyEdit(
+    Nip01Event e,
+    String postId,
+    String text,
+    bool mine,
+    Identity me,
+  ) async {
+    final p = _posts[postId];
+    if (p == null) {
+      // Its post may still be on its way: the newest edit is kept in
+      // memory, bounded.
+      final held = _pendingEdits[postId];
+      if (held != null
+          ? e.createdAt > held.createdAt
+          : _pendingEdits.length < 500) {
+        _pendingEdits[postId] = e;
+      }
+      return;
+    }
+    if (p.channel != e.pubKey) return;
+    if (p.editedAt != null && e.createdAt <= p.editedAt!) {
+      // My own edit, seen back: it reached a relay.
+      if (mine && e.createdAt == p.editedAt && p.editUnsent) {
+        await _putPost(p.copyWith(editUnsent: false), me);
+      }
+      return;
+    }
+    await _putPost(
+      p.copyWith(
+        text: text,
+        editedAt: e.createdAt,
+        editEvent: mine ? Nip01EventModel.fromEntity(e).toJson() : null,
       ),
       me,
     );
@@ -732,7 +1059,11 @@ class ChannelStore extends ChangeNotifier {
       ChannelEntry(
         pk: invite.channelPk,
         contentKey: invite.contentKey,
-        meta: ChannelMeta(name: invite.name, public: invite.public),
+        meta: ChannelMeta(
+          name: invite.name,
+          public: invite.public,
+          fullHistory: invite.fullHistory,
+        ),
         status: status,
         since: _now(),
         relays: invite.relays,

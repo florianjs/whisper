@@ -14,7 +14,9 @@ import '../logic/channel.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/channel_tile.dart';
+import '../widgets/chat_list.dart';
 import '../widgets/chat_parts.dart';
+import '../widgets/link_text.dart';
 import '../widgets/secure_keyboard.dart';
 import '../widgets/ui.dart';
 
@@ -33,15 +35,37 @@ class _ChannelScreenState extends State<ChannelScreen> {
   final _secure = SecureTextController();
   bool _keyboardOpen = false;
 
+  /// The post the composer is editing, if any.
+  String? _editing;
+
+  late final MessageStore _reads;
+
+  /// Oldest post from the admin I hadn't seen when opening.
+  String? _firstUnread;
+
+  String get _readKey => 'channel:${widget.pk}';
+
   @override
   void initState() {
     super.initState();
+    _reads = context.read<MessageStore>();
+    final last = _reads.lastRead(_readKey);
+    if (last != null) {
+      _firstUnread = context
+          .read<ChannelStore>()
+          .postsIn(widget.pk)
+          .where((p) => p.status == PostStatus.received && p.createdAt > last)
+          .firstOrNull
+          ?.id;
+    }
+    _reads.markRead(_readKey);
     _input.addListener(() => setState(() {}));
     _secure.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _reads.markRead(_readKey);
     _input.dispose();
     _focus.dispose();
     _secure.dispose();
@@ -58,7 +82,30 @@ class _ChannelScreenState extends State<ChannelScreen> {
     if (text.trim().isEmpty) return;
     HapticFeedback.selectionClick();
     _paranoiaKeyboard ? _secure.clear() : _input.clear();
-    await context.read<ChannelStore>().post(widget.pk, text);
+    final editing = _editing;
+    final store = context.read<ChannelStore>();
+    if (editing != null) {
+      setState(() => _editing = null);
+      await store.edit(editing, text);
+    } else {
+      await store.post(widget.pk, text);
+    }
+  }
+
+  void _startEdit(ChannelPost post) {
+    setState(() => _editing = post.id);
+    if (_paranoiaKeyboard) {
+      _secure.value = post.text;
+      setState(() => _keyboardOpen = true);
+    } else {
+      _input.text = post.text;
+      _focus.requestFocus();
+    }
+  }
+
+  void _cancelEdit() {
+    setState(() => _editing = null);
+    _paranoiaKeyboard ? _secure.clear() : _input.clear();
   }
 
   @override
@@ -68,6 +115,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
     final entry = store.channel(widget.pk);
     if (entry == null) return Scaffold(appBar: AppBar());
     final posts = store.postsIn(widget.pk).reversed.toList();
+    final pinned = store.pinnedIn(widget.pk);
     final paranoia = context.watch<SettingsStore>().paranoia;
     final canSend = _draft.trim().isNotEmpty;
     final pending = entry.status == ChannelStatus.pending;
@@ -119,20 +167,46 @@ class _ChannelScreenState extends State<ChannelScreen> {
                             title: l.channelEmptyViewer,
                             body: entry.mine ? l.channelEmptyAdmin : null,
                           )
-                        : ListView.builder(
-                            reverse: true,
+                        : ChatList(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                             itemCount: posts.length,
+                            idAt: (i) => posts[i].id,
+                            firstUnreadId: _firstUnread,
+                            pinned: pinned == null
+                                ? null
+                                : PinnedInfo(
+                                    id: pinned.id,
+                                    preview: paranoia.blurHistory
+                                        ? null
+                                        : pinned.text,
+                                    onUnpin: entry.mine
+                                        ? () => store.pin(widget.pk, null)
+                                        : null,
+                                  ),
                             itemBuilder: (context, i) => _PostCard(
                               key: ValueKey(posts[i].id),
                               post: posts[i],
                               blur: paranoia.blurHistory,
                               canReact: !pending,
+                              pinned: pinned?.id == posts[i].id,
+                              onEdit: entry.mine
+                                  ? () => _startEdit(posts[i])
+                                  : null,
+                              onPin: entry.mine
+                                  ? () => store.pin(
+                                      widget.pk,
+                                      pinned?.id == posts[i].id
+                                          ? null
+                                          : posts[i].id,
+                                    )
+                                  : null,
                             ),
                           ),
                   ),
                 ),
               ),
+              if (_editing != null && entry.mine)
+                _EditingBar(onCancel: _cancelEdit),
               if (pending)
                 _InviteBar(entry: entry)
               else if (entry.mine)
@@ -187,11 +261,21 @@ class _PostCard extends StatelessWidget {
     required this.post,
     required this.blur,
     required this.canReact,
+    this.pinned = false,
+    this.onEdit,
+    this.onPin,
   });
 
   final ChannelPost post;
   final bool blur;
   final bool canReact;
+  final bool pinned;
+
+  /// Null: not mine to pin.
+  final VoidCallback? onPin;
+
+  /// Null: not mine to edit.
+  final VoidCallback? onEdit;
 
   Future<void> _pick(BuildContext context) async {
     final store = context.read<ChannelStore>();
@@ -234,9 +318,11 @@ class _PostCard extends StatelessWidget {
     final counts = store.reactionsOf(post.id);
     final mine = store.myReactionOn(post.channel, post.id);
     final failed = post.status == PostStatus.failed;
-    final time = DateFormat.MMMd(
+    final stamp = DateFormat.MMMd(
       Localizations.localeOf(context).toString(),
-    ).add_Hm().format(post.time);
+    ).add_Hm();
+    final time = stamp.format(post.time);
+    final editedAt = post.editedAt;
 
     final c = context.c;
     Widget body = Container(
@@ -252,7 +338,7 @@ class _PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          LinkText(
             post.text,
             style: context.text.bodyLarge?.copyWith(
               fontSize: 15.5,
@@ -262,7 +348,14 @@ class _PostCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Text(time, style: TextStyle(color: c.faint, fontSize: 11.5)),
+              Flexible(
+                child: Text(
+                  editedAt == null
+                      ? time
+                      : '$time · ${l.channelPostEdited(stamp.format(DateTime.fromMillisecondsSinceEpoch(editedAt * 1000)))}',
+                  style: TextStyle(color: c.faint, fontSize: 11.5),
+                ),
+              ),
               if (post.status == PostStatus.sending) ...[
                 const SizedBox(width: 6),
                 Icon(Icons.schedule_rounded, size: 12, color: c.faint),
@@ -275,6 +368,42 @@ class _PostCard extends StatelessWidget {
                   child: Text(
                     l.messageFailed,
                     style: TextStyle(color: c.danger, fontSize: 11.5),
+                  ),
+                ),
+              ],
+              if (onEdit != null && !failed) ...[
+                const Spacer(),
+                if (onPin != null)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(100),
+                    onTap: onPin,
+                    child: Tooltip(
+                      message: pinned ? l.unpinMessage : l.pinMessage,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          pinned
+                              ? Icons.push_pin_rounded
+                              : Icons.push_pin_outlined,
+                          size: 15,
+                          color: pinned ? c.accent : c.faint,
+                        ),
+                      ),
+                    ),
+                  ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(100),
+                  onTap: onEdit,
+                  child: Tooltip(
+                    message: l.channelPostEdit,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        size: 15,
+                        color: c.faint,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -337,6 +466,40 @@ class _PostCard extends StatelessWidget {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Above the composer while it holds an edit.
+class _EditingBar extends StatelessWidget {
+  const _EditingBar({required this.onCancel});
+
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final c = context.c;
+    return Container(
+      color: c.surface,
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+      child: Row(
+        children: [
+          Icon(Icons.edit_outlined, size: 16, color: c.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l.channelPostEditing,
+              style: context.text.labelLarge?.copyWith(color: c.accent),
+            ),
+          ),
+          IconButton(
+            tooltip: l.cancel,
+            onPressed: onCancel,
+            icon: const Icon(Icons.close_rounded, size: 18),
+          ),
         ],
       ),
     );

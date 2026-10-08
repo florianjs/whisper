@@ -9,6 +9,7 @@ import '../logic/identity.dart';
 import '../logic/image_transfer.dart';
 import '../logic/nip17.dart';
 import '../logic/photo.dart';
+import '../logic/pin.dart';
 import '../logic/transport.dart';
 import '../models/message.dart';
 import 'db.dart';
@@ -54,6 +55,8 @@ class MessageStore extends ChangeNotifier {
   static const _contactsCollection = 'contacts';
   static const _imagesCollection = 'images';
   static const _infoCollection = 'contact_info';
+  static const _pinsCollection = 'pins';
+  static const _readCollection = 'read_marks';
 
   final IdentityStore _identity;
   final DocStore _db;
@@ -88,6 +91,32 @@ class MessageStore extends ChangeNotifier {
   final Map<String, Message> _byId = {};
   final Map<String, ContactState> _contacts = {};
 
+  /// Pinned message per conversation, and whether the last change of it
+  /// still has to reach the other side.
+  final Map<String, ({Pin pin, bool unsent})> _pins = {};
+
+  /// The message pinned in the conversation with [peer], if it's here.
+  Message? pinnedWith(String peer) {
+    final id = _pins[peer]?.pin.messageId;
+    final m = id == null ? null : _byId[id];
+    return m?.peer == peer ? m : null;
+  }
+
+  /// When I last looked at each conversation (`dm:`, `group:`, `channel:`
+  /// + id), local only: never sent, so nobody learns when I read.
+  final Map<String, int> _read = {};
+
+  /// Null if never opened since read marks exist: no divider then.
+  int? lastRead(String conversation) => _read[conversation];
+
+  Future<void> markRead(String conversation) async {
+    final me = _me;
+    if (me == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    _read[conversation] = now;
+    await _db.putDoc(_readCollection, {'id': conversation, 'at': now});
+  }
+
   /// Local-only details about a contact: nickname, safety number verified.
   final Map<String, ({String? alias, bool verified})> _info = {};
 
@@ -114,6 +143,14 @@ class MessageStore extends ChangeNotifier {
   final _otherRumors = StreamController<Nip01Event>.broadcast();
   final _groupRumors = StreamController<Nip01Event>.broadcast();
   final _arrivals = StreamController<Message>.broadcast();
+  final _groupFiles =
+      StreamController<
+        ({String sender, String fileId, Uint8List bytes})
+      >.broadcast();
+
+  /// Images completed for no 1:1 message: group photos (GroupStore).
+  Stream<({String sender, String fileId, Uint8List bytes})> get groupFiles =>
+      _groupFiles.stream;
 
   /// Messages from others as they arrive (history replays included: filter
   /// on [Message.createdAt]). Drives notifications.
@@ -179,6 +216,8 @@ class MessageStore extends ChangeNotifier {
     _byId.clear();
     _contacts.clear();
     _info.clear();
+    _pins.clear();
+    _read.clear();
     _nicknames.clear();
     _seenWraps.clear();
     _loaded = false;
@@ -207,6 +246,19 @@ class MessageStore extends ChangeNotifier {
         alias: d['alias'] as String?,
         verified: d['verified'] == true,
       );
+    }
+    final readDocs = await _db.listDocs(_readCollection);
+    if (_me != id) return;
+    for (final d in readDocs) {
+      if (d['at'] case final int at) _read[d['id'] as String] = at;
+    }
+    final pinDocs = await _db.listDocs(_pinsCollection);
+    if (_me != id) return;
+    for (final d in pinDocs) {
+      final pin = Pin.fromJson(d);
+      if (pin != null) {
+        _pins[d['id'] as String] = (pin: pin, unsent: d['unsent'] == true);
+      }
     }
     for (final d in contactDocs) {
       _contacts[d['id'] as String] = ContactState.values.byName(
@@ -246,13 +298,33 @@ class MessageStore extends ChangeNotifier {
     if (!fromMe && state == ContactState.blocked) return;
     if (rumor.kind == GroupState.kindState ||
         rumor.kind == GroupState.kindLeave ||
-        (rumor.kind == Nip17.kindChat && groupIdOf(rumor) != null)) {
+        ((rumor.kind == Nip17.kindChat ||
+                rumor.kind == Pin.kindRumor ||
+                rumor.kind == ImageTransfer.kindHeader) &&
+            groupIdOf(rumor) != null)) {
       // Groups never create 1:1 contacts or requests.
       _groupRumors.add(rumor);
       return;
     }
     if (rumor.kind == ImageTransfer.kindChunk) {
       if (!fromMe) await _onChunk(peer, rumor, me);
+      return;
+    }
+    if (rumor.kind == Pin.kindRumor) {
+      final pin = Pin.fromRumor(rumor);
+      if (pin == null) return;
+      if (fromMe) {
+        // My own pin (restore), maybe ahead of the messages: I had accepted
+        // them, like a self-copy of a message says.
+        if (state != ContactState.accepted) {
+          await _setContact(peer, ContactState.accepted, me);
+        }
+      } else if (state == null) {
+        return; // A pin never opens a conversation.
+      }
+      if (Pin.newer(_pins[peer]?.pin, pin)) {
+        await _putPin(peer, pin, unsent: false, owner: me);
+      }
       return;
     }
     final isImage = rumor.kind == ImageTransfer.kindHeader;
@@ -292,6 +364,7 @@ class MessageStore extends ChangeNotifier {
           ? MessageStatus.sent
           : (header == null ? MessageStatus.received : MessageStatus.receiving),
       image: header,
+      replyTo: header == null ? Nip17.replyIdOf(rumor) : null,
     );
     await _put(message, me);
     if (!fromMe && _me == me) _arrivals.add(message);
@@ -310,7 +383,73 @@ class MessageStore extends ChangeNotifier {
     final message = _byId.values
         .where((m) => m.peer == peer && m.image?.fileId == chunk.fileId)
         .firstOrNull;
-    if (message != null) await _imageComplete(message, bytes, me);
+    if (message != null) {
+      await _imageComplete(message, bytes, me);
+    } else if (_me == me) {
+      _groupFiles.add((sender: peer, fileId: chunk.fileId, bytes: bytes));
+    }
+  }
+
+  /// A group photo's header: chunks from [sender] are reassembled here, like
+  /// for 1:1 photos. Returns the bytes if they were all in already.
+  Uint8List? expectFile(String sender, ImageHeader header) =>
+      _reassembler.addHeader(sender, header);
+
+  /// Stores a group photo (encrypted DB), once its group says it may.
+  Future<void> storeFile(String fileId, Uint8List bytes) async {
+    final me = _me;
+    if (me != null) await _storeImage(fileId, bytes, me);
+  }
+
+  /// Sends a photo to several people: [header] (built per recipient, same
+  /// rumor id for all), then its chunks. Progress shows on [messageId].
+  /// True if every recipient but me got all of it.
+  Future<bool> deliverFile({
+    required String messageId,
+    required List<String> to,
+    required Nip01Event Function(String recipient) header,
+    required String fileId,
+    required Uint8List bytes,
+  }) async {
+    final me = _me;
+    if (me == null) return false;
+    final chunks = ImageTransfer.split(bytes);
+    final total = chunks.length * to.length;
+    var done = 0, ok = true;
+    for (final recipient in to) {
+      try {
+        await _transport.deliver(
+          await _wrap(
+            sender: me,
+            recipientPubkey: recipient,
+            rumor: header(recipient),
+          ),
+        );
+        for (var i = 0; i < chunks.length; i++) {
+          if (done > 0 && chunkPacing > Duration.zero) {
+            await Future<void>.delayed(chunkPacing);
+          }
+          final rumor = ImageTransfer.chunkRumor(
+            sender: me.publicKey,
+            recipient: recipient,
+            fileId: fileId,
+            index: i,
+            data: chunks[i],
+          );
+          await _transport.deliver(
+            await _wrap(sender: me, recipientPubkey: recipient, rumor: rumor),
+          );
+          _sendProgress[messageId] = (++done, total);
+          notifyListeners();
+        }
+      } catch (_) {
+        ok = false;
+        done += chunks.length;
+      }
+    }
+    _sendProgress.remove(messageId);
+    notifyListeners();
+    return ok;
   }
 
   /// Verified image in: stored encrypted if I accepted the sender, held in
@@ -343,7 +482,8 @@ class MessageStore extends ChangeNotifier {
   Future<Uint8List?> imageFor(Message m) async {
     final fileId = m.image?.fileId;
     if (fileId == null) return null;
-    if (!m.fromMe && !isAccepted(m.peer)) return null;
+    // Group photos are only stored once their group is accepted.
+    if (!m.fromMe && m.groupId == null && !isAccepted(m.peer)) return null;
     final cached = _images[fileId];
     if (cached != null) return cached;
     final doc = await _db.getDoc(_imagesCollection, fileId);
@@ -442,14 +582,19 @@ class MessageStore extends ChangeNotifier {
     // shows past images as unavailable.
   }
 
-  Future<void> send(String peer, String text) async {
+  /// [replyTo]: a message of this conversation, quoted above the new one.
+  Future<void> send(String peer, String text, {String? replyTo}) async {
     final me = _me;
     final trimmed = text.trim();
     if (me == null || trimmed.isEmpty) return;
+    final quoted = replyTo != null && _byId[replyTo]?.peer == peer
+        ? replyTo
+        : null;
     final rumor = Nip17.chatRumor(
       senderPubkey: me.publicKey,
       recipientPubkey: peer,
       text: trimmed,
+      replyTo: quoted,
     );
     final message = Message(
       id: rumor.id,
@@ -458,6 +603,7 @@ class MessageStore extends ChangeNotifier {
       text: trimmed,
       createdAt: rumor.createdAt,
       status: MessageStatus.sending,
+      replyTo: quoted,
     );
     // Writing to someone is accepting them (also unblocks).
     if (_contacts[peer] != ContactState.accepted) {
@@ -467,10 +613,74 @@ class MessageStore extends ChangeNotifier {
     await _deliver(message, rumor, me);
   }
 
+  /// Pins [messageId] (null unpins) for both sides of the conversation.
+  Future<void> pin(String peer, String? messageId) async {
+    final me = _me;
+    if (me == null || !isAccepted(peer)) return;
+    if (messageId != null && _byId[messageId]?.peer != peer) return;
+    final current = _pins[peer]?.pin;
+    if (current?.messageId == messageId) return;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    // Strictly newer than the pin it replaces, even within the same second.
+    final at = current != null && current.at >= now ? current.at + 1 : now;
+    final pin = Pin(messageId, at);
+    await _putPin(peer, pin, unsent: true, owner: me);
+    await _deliverPin(peer, pin, me);
+  }
+
+  Future<void> _deliverPin(String peer, Pin pin, Identity me) async {
+    final rumor = Pin.rumor(
+      sender: me.publicKey,
+      to: [peer],
+      messageId: pin.messageId,
+      createdAt: pin.at,
+    );
+    try {
+      await _transport.deliver(
+        await _wrap(sender: me, recipientPubkey: peer, rumor: rumor),
+      );
+    } catch (_) {
+      return; // Still unsent: retried with the same rumor.
+    }
+    final now = _pins[peer];
+    if (now != null && now.pin.at == pin.at) {
+      await _putPin(peer, pin, unsent: false, owner: me);
+    }
+    // Self-copy: a restored account gets its pin back. Best effort.
+    try {
+      final forMe = await _wrap(
+        sender: me,
+        recipientPubkey: me.publicKey,
+        rumor: rumor,
+      );
+      _seenWraps.add(forMe.id);
+      await _transport.deliver(forMe);
+    } catch (_) {}
+  }
+
+  Future<void> _putPin(
+    String peer,
+    Pin pin, {
+    required bool unsent,
+    required Identity owner,
+  }) async {
+    if (_me != owner) return;
+    _pins[peer] = (pin: pin, unsent: unsent);
+    notifyListeners();
+    await _db.putDoc(_pinsCollection, {
+      'id': peer,
+      ...pin.toJson(),
+      'unsent': unsent,
+    });
+  }
+
   /// Resends messages that never made it (e.g. when relays come back).
   Future<void> retryFailed() async {
     final me = _me;
     if (me == null) return;
+    for (final e in _pins.entries.toList()) {
+      if (e.value.unsent) await _deliverPin(e.key, e.value.pin, me);
+    }
     final pending = _byId.values
         .where((m) => m.fromMe && m.status != MessageStatus.sent)
         .toList();
@@ -503,6 +713,7 @@ class MessageStore extends ChangeNotifier {
       senderPubkey: me.publicKey,
       recipientPubkey: m.peer,
       text: m.text,
+      replyTo: m.replyTo,
       createdAt: m.createdAt,
     );
     await _put(m.copyWith(status: MessageStatus.sending), me);
@@ -616,6 +827,9 @@ class MessageStore extends ChangeNotifier {
     if (_info.remove(peer) != null) {
       unawaited(_db.deleteDoc(_infoCollection, peer));
     }
+    if (_pins.remove(peer) != null) {
+      unawaited(_db.deleteDoc(_pinsCollection, peer));
+    }
     final ids = _byId.values
         .where((m) => m.peer == peer)
         .map((m) => m.id)
@@ -673,6 +887,7 @@ class MessageStore extends ChangeNotifier {
     _sub?.cancel();
     _otherRumors.close();
     _groupRumors.close();
+    _groupFiles.close();
     _arrivals.close();
     super.dispose();
   }

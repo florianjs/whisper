@@ -993,4 +993,66 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get updateDirectWarning =>
       '更快，但你的网络服务商和 GitHub 会看到这部手机在下载 Whisper。在 Whisper 或 Tor 受监控的地方请勿这样做。文件同样会被校验。';
+
+  @override
+  String get channelHistory => '以往的帖子';
+
+  @override
+  String get channelHistoryAll => '完整历史';
+
+  @override
+  String get channelHistoryAllBody => '新关注者可以看到以前的所有帖子。你的手机会保存它们，并每天重新发送到中继一次。';
+
+  @override
+  String get channelHistoryJoin => '从关注时开始';
+
+  @override
+  String get channelHistoryJoinBody =>
+      '新关注者只能看到关注之后发布的帖子。以前的帖子不再重新发送，会逐渐从中继上消失。';
+
+  @override
+  String get channelPostEdit => '编辑';
+
+  @override
+  String get channelPostEditing => '正在编辑帖子';
+
+  @override
+  String channelPostEdited(String date) {
+    return '已于 $date 编辑';
+  }
+
+  @override
+  String get groupCopyLink => '复制群组链接';
+
+  @override
+  String get groupLinkCopied => '群组链接已复制';
+
+  @override
+  String get groupLinkNotMember => '你不在这个群组中。只有管理员可以添加你。';
+
+  @override
+  String get pinMessage => '置顶';
+
+  @override
+  String get unpinMessage => '取消置顶';
+
+  @override
+  String get pinnedMessage => '置顶消息';
+
+  @override
+  String get chatJumpLatest => '最新消息';
+
+  @override
+  String get chatNewMessages => '新消息';
+
+  @override
+  String get replyAction => '回复';
+
+  @override
+  String replyingTo(String name) {
+    return '回复 $name';
+  }
+
+  @override
+  String get messageUnavailable => '消息不可用';
 }

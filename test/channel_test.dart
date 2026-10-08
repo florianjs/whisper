@@ -141,6 +141,38 @@ void main() {
     expect(ChannelMeta.fromJson({'n': ' ', 'p': true}), isNull);
     expect(ChannelMeta.fromJson({'n': 'x' * 61, 'p': true}), isNull);
     expect(ChannelMeta.fromJson({'n': 'x'}), isNull);
+    // From before the choice existed: full history.
+    expect(ChannelMeta.fromJson({'n': 'x', 'p': true})!.fullHistory, isTrue);
+    expect(
+      ChannelMeta.fromJson({'n': 'x', 'p': true, 'h': false})!.fullHistory,
+      isFalse,
+    );
+    expect(ChannelMeta.fromJson({'n': 'x', 'p': true, 'h': 'no'}), isNull);
+  });
+
+  test('an edit can only be read as an edit of its channel', () async {
+    final keys = await ChannelKeys.derive(deriveIdentity(aliceWords), 0);
+    final postId = 'ab' * 32;
+    final e = await signEdit(keys, postId, 'corrigé');
+    expect(e.kind, Channel.kindEdit);
+    expect(e.content, isNot(contains('corrigé')));
+    final clear = await decryptFor(
+      keys.contentKey,
+      keys.publicKey,
+      Channel.kindEdit,
+      e.content,
+    );
+    expect(clear, {'e': postId, 't': 'corrigé'});
+    // Not replayable as a post.
+    expect(
+      await decryptFor(
+        keys.contentKey,
+        keys.publicKey,
+        Channel.kindPost,
+        e.content,
+      ),
+      isNull,
+    );
   });
 
   test('reaction counting: latest per reactor, retract drops it', () {

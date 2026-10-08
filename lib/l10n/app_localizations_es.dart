@@ -1048,4 +1048,68 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get updateDirectWarning =>
       'Más rápido, pero tu proveedor de internet y GitHub verán que este teléfono descarga Whisper. Evítalo donde Whisper o Tor estén vigilados. El archivo se verifica igual.';
+
+  @override
+  String get channelHistory => 'Publicaciones anteriores';
+
+  @override
+  String get channelHistoryAll => 'Historial completo';
+
+  @override
+  String get channelHistoryAllBody =>
+      'Los nuevos seguidores ven todas las publicaciones anteriores. Tu teléfono las guarda y las vuelve a enviar a los relays una vez al día.';
+
+  @override
+  String get channelHistoryJoin => 'Desde que siguen el canal';
+
+  @override
+  String get channelHistoryJoinBody =>
+      'Los nuevos seguidores solo ven lo publicado después de unirse. Las publicaciones anteriores no se vuelven a enviar y desaparecen de los relays.';
+
+  @override
+  String get channelPostEdit => 'Editar';
+
+  @override
+  String get channelPostEditing => 'Editando una publicación';
+
+  @override
+  String channelPostEdited(String date) {
+    return 'editado el $date';
+  }
+
+  @override
+  String get groupCopyLink => 'Copiar enlace del grupo';
+
+  @override
+  String get groupLinkCopied => 'Enlace del grupo copiado';
+
+  @override
+  String get groupLinkNotMember =>
+      'No estás en este grupo. Solo su admin puede añadirte.';
+
+  @override
+  String get pinMessage => 'Fijar';
+
+  @override
+  String get unpinMessage => 'Desfijar';
+
+  @override
+  String get pinnedMessage => 'Mensaje fijado';
+
+  @override
+  String get chatJumpLatest => 'Últimos mensajes';
+
+  @override
+  String get chatNewMessages => 'Mensajes nuevos';
+
+  @override
+  String get replyAction => 'Responder';
+
+  @override
+  String replyingTo(String name) {
+    return 'Respondiendo a $name';
+  }
+
+  @override
+  String get messageUnavailable => 'Mensaje no disponible';
 }

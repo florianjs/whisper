@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:whisper/logic/pin.dart';
+import 'package:whisper/data/message_store.dart';
 import 'support/fake_network.dart';
 import 'package:whisper/data/db.dart';
 import 'package:whisper/data/key_vault.dart';
@@ -338,5 +340,112 @@ void main() {
       expect(alice.messages.aliasOf(bobPub), isNull);
       expect(await alice.db.listDocs('contact_info'), isEmpty);
     });
+  });
+
+  group('pinned message', () {
+    test('either side pins for both; latest pin or unpin wins', () async {
+      final alice = await makePeer(net, aliceWords);
+      final bob = await makePeer(net, bobWords);
+      await alice.messages.send(bob.pubkey, 'à retenir');
+      await until(() => bob.messages.requests.isNotEmpty);
+      await bob.messages.accept(alice.pubkey);
+      final id = alice.messages.messagesWith(bob.pubkey).single.id;
+
+      await alice.messages.pin(bob.pubkey, id);
+      expect(alice.messages.pinnedWith(bob.pubkey)?.id, id);
+      await until(() => bob.messages.pinnedWith(alice.pubkey) != null);
+      expect(bob.messages.pinnedWith(alice.pubkey)!.text, 'à retenir');
+
+      await bob.messages.pin(alice.pubkey, null);
+      await until(() => alice.messages.pinnedWith(bob.pubkey) == null);
+      expect(bob.messages.pinnedWith(alice.pubkey), isNull);
+    });
+
+    test(
+      'a stranger cannot pin anything, nor open a request by pinning',
+      () async {
+        final alice = await makePeer(net, aliceWords);
+        final bob = await makePeer(net, bobWords);
+        final rumor = Pin.rumor(
+          sender: alice.pubkey,
+          to: [bob.pubkey],
+          messageId: 'ab' * 32,
+        );
+        await alice.transport.deliver(
+          await Nip17.wrap(
+            sender: alice.identity.identity!,
+            recipientPubkey: bob.pubkey,
+            rumor: rumor,
+          ),
+        );
+        await quiet();
+        expect(bob.messages.requests, isEmpty);
+        expect(bob.messages.pinnedWith(alice.pubkey), isNull);
+        // Pinning is only for accepted conversations.
+        await bob.messages.pin(alice.pubkey, null);
+        expect(net.stored, hasLength(1));
+      },
+    );
+
+    test('offline pin goes out on retry; restore gets it back', () async {
+      final alice = await makePeer(net, aliceWords);
+      final bob = await makePeer(net, bobWords);
+      await alice.messages.send(bob.pubkey, 'note');
+      await until(() => bob.messages.requests.isNotEmpty);
+      await bob.messages.accept(alice.pubkey);
+      final id = alice.messages.messagesWith(bob.pubkey).single.id;
+
+      net.down = true;
+      await alice.messages.pin(bob.pubkey, id);
+      net.down = false;
+      await alice.messages.retryFailed();
+      await until(() => bob.messages.pinnedWith(alice.pubkey) != null);
+
+      final restored = await makePeer(net, aliceWords);
+      restored.transport.replay();
+      await until(() => restored.messages.pinnedWith(bob.pubkey) != null);
+      expect(restored.messages.pinnedWith(bob.pubkey)!.id, id);
+    });
+  });
+
+  test('reply: the quote reference arrives, and survives a retry', () async {
+    final alice = await makePeer(net, aliceWords);
+    final bob = await makePeer(net, bobWords);
+    await alice.messages.send(bob.pubkey, 'on se voit quand ?');
+    await until(() => bob.messages.requests.isNotEmpty);
+    await bob.messages.accept(alice.pubkey);
+    final question = bob.messages.messagesWith(alice.pubkey).single.id;
+
+    net.down = true;
+    await bob.messages.send(alice.pubkey, 'demain', replyTo: question);
+    final failed = bob.messages.messagesWith(alice.pubkey).last;
+    expect(failed.replyTo, question);
+    net.down = false;
+    await bob.messages.retry(failed.id);
+    await until(() => alice.messages.messagesWith(bob.pubkey).length == 2);
+    final answer = alice.messages.messagesWith(bob.pubkey).last;
+    expect(answer.id, failed.id, reason: 'same rumor, reply included');
+    expect(answer.replyTo, question);
+
+    // A reply to a message of another conversation isn't one.
+    await bob.messages.send(alice.pubkey, 'x', replyTo: 'ab' * 32);
+    expect(bob.messages.messagesWith(alice.pubkey).last.replyTo, isNull);
+  });
+
+  test('read marks are local and per conversation', () async {
+    final alice = await makePeer(net, aliceWords);
+    expect(alice.messages.lastRead('dm:x'), isNull);
+    await alice.messages.markRead('dm:x');
+    expect(alice.messages.lastRead('dm:x'), isNotNull);
+    expect(alice.messages.lastRead('group:x'), isNull);
+    expect(net.stored, isEmpty, reason: 'nothing sent');
+    final again = MessageStore(
+      identity: alice.identity,
+      db: alice.db,
+      transport: alice.transport,
+    );
+    await until(() => again.loaded);
+    expect(again.lastRead('dm:x'), alice.messages.lastRead('dm:x'));
+    again.dispose();
   });
 }

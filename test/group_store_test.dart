@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ndk/ndk.dart' show Nip01Event;
 import 'package:whisper/data/group_store.dart';
@@ -6,6 +8,7 @@ import 'package:whisper/logic/identity.dart';
 import 'package:whisper/logic/nip17.dart';
 import 'package:whisper/models/message.dart';
 
+import 'package:whisper/logic/pin.dart';
 import 'support/fake_network.dart';
 
 class Member {
@@ -251,5 +254,116 @@ void main() {
     await alice.groups.retryFailed();
     await until(() => bob.groups.group(id) != null);
     expect(alice.groups.group(id)!.unsent, isEmpty);
+  });
+
+  test('only the admin pins, for every member', () async {
+    await befriend(alice, carol);
+    final id = (await alice.groups.create('Famille', {
+      bob.pubkey,
+      carol.pubkey,
+    }))!;
+    await until(() => bob.groups.group(id) != null);
+    await until(() => carol.groups.group(id) != null);
+    await bob.groups.send(id, 'rendez-vous à 8h');
+    await until(() => alice.groups.messagesIn(id).isNotEmpty);
+    await until(() => carol.groups.messagesIn(id).isNotEmpty);
+    final msg = alice.groups.messagesIn(id).single.id;
+
+    await alice.groups.pin(id, msg);
+    await until(() => carol.groups.pinnedIn(id) != null);
+    await until(() => bob.groups.pinnedIn(id) != null);
+    expect(carol.groups.pinnedIn(id)!.text, 'rendez-vous à 8h');
+
+    // A member can't: not through the store, nor with a crafted rumor.
+    await bob.groups.pin(id, null);
+    final forged = Pin.rumor(
+      sender: bob.pubkey,
+      to: [carol.pubkey],
+      messageId: null,
+      extraTags: [
+        [GroupState.groupTag, id],
+      ],
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+    );
+    await bob.peer.transport.deliver(await wrapFor(bob, carol.pubkey, forged));
+    await quiet();
+    expect(carol.groups.pinnedIn(id)?.id, msg);
+    expect(carol.peer.messages.requests, isEmpty);
+
+    await alice.groups.pin(id, null);
+    await until(() => carol.groups.pinnedIn(id) == null);
+  });
+
+  group('photos and replies', () {
+    late String id;
+
+    setUp(() async {
+      await befriend(alice, carol);
+      id = (await alice.groups.create('Famille', {bob.pubkey, carol.pubkey}))!;
+      await until(() => bob.groups.group(id) != null);
+      await until(() => carol.groups.group(id) != null);
+    });
+
+    test('a photo reaches every member, intact', () async {
+      final bytes = Uint8List.fromList(
+        List.generate(30000, (i) => i * 7 % 256),
+      );
+      await bob.groups.sendImage(id, (bytes: bytes, width: 40, height: 30));
+      final sent = bob.groups.messagesIn(id).single;
+      expect(sent.status, MessageStatus.sent);
+      expect(sent.image!.chunks, 3);
+
+      for (final m in [alice, carol]) {
+        await until(
+          () =>
+              m.groups.messagesIn(id).singleOrNull?.status ==
+              MessageStatus.received,
+        );
+        final got = m.groups.messagesIn(id).single;
+        expect(got.peer, bob.pubkey);
+        expect(await m.peer.messages.imageFor(got), bytes);
+      }
+      // Carol and Bob aren't contacts: still no 1:1 request.
+      expect(carol.peer.messages.requests, isEmpty);
+    });
+
+    test('offline photo fails, then retry sends the same message', () async {
+      final bytes = Uint8List.fromList(List.filled(5000, 3));
+      net.down = true;
+      await alice.groups.sendImage(id, (bytes: bytes, width: 1, height: 1));
+      final m = alice.groups.messagesIn(id).single;
+      expect(m.status, MessageStatus.failed);
+      net.down = false;
+      await alice.groups.retry(m.id);
+      expect(alice.groups.messagesIn(id).single.status, MessageStatus.sent);
+      await until(() => carol.groups.messagesIn(id).isNotEmpty);
+      expect(carol.groups.messagesIn(id).single.id, m.id);
+    });
+
+    test('a pending invitation stores no photo', () async {
+      final dave = await member(net, generateMnemonic());
+      final other = (await bob.groups.create('Inconnus', {dave.pubkey}))!;
+      await until(() => dave.groups.group(other) != null);
+      expect(dave.groups.group(other)!.status, GroupStatus.pending);
+      await bob.groups.sendImage(other, (
+        bytes: Uint8List.fromList(List.filled(100, 1)),
+        width: 1,
+        height: 1,
+      ));
+      await until(() => dave.groups.messagesIn(other).isNotEmpty);
+      await quiet();
+      final m = dave.groups.messagesIn(other).single;
+      expect(m.status, MessageStatus.receiving);
+      expect(await dave.peer.messages.imageFor(m), isNull);
+    });
+
+    test('replies carry the quoted message', () async {
+      await alice.groups.send(id, 'qui vient samedi ?');
+      await until(() => bob.groups.messagesIn(id).isNotEmpty);
+      final q = bob.groups.messagesIn(id).single.id;
+      await bob.groups.send(id, 'moi', replyTo: q);
+      await until(() => carol.groups.messagesIn(id).length == 2);
+      expect(carol.groups.messagesIn(id).last.replyTo, q);
+    });
   });
 }

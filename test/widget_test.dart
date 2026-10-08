@@ -11,6 +11,7 @@ import 'package:whisper/data/db.dart';
 import 'package:whisper/data/channel_store.dart';
 import 'package:whisper/data/group_store.dart';
 import 'package:whisper/widgets/app_button.dart';
+import 'package:whisper/widgets/chat_parts.dart';
 
 import 'support/fake_network.dart';
 import 'package:whisper/data/identity_store.dart';
@@ -26,6 +27,7 @@ import 'package:whisper/logic/nip17.dart';
 import 'package:whisper/logic/relays.dart';
 import 'package:whisper/models/message.dart';
 import 'package:whisper/main.dart';
+import 'package:whisper/screens/chat_screen.dart';
 
 const vector12 =
     'leader monkey parrot ring guide accident before fence cannon height naive bean';
@@ -346,10 +348,35 @@ void main() {
     expect(find.text('premier message'), findsOneWidget);
     expect(find.byIcon(Icons.done_rounded), findsOneWidget);
 
+    // Long-press → Reply: the bar shows, then the quote in the new bubble.
+    await tester.longPress(find.text('premier message'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pin'), findsOneWidget);
+    await tester.tap(find.text('Reply'));
+    await tester.pumpAndSettle();
+    expect(find.text('Replying to You'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'suite');
+    await tester.pump();
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Send'));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Replying to You'), findsNothing);
+    expect(find.text('suite'), findsOneWidget);
+    expect(find.byType(QuoteBlock), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(QuoteBlock),
+        matching: find.text('premier message'),
+      ),
+      findsOneWidget,
+    );
+
     // Back on the list: the conversation is there with a "You:" preview.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('You: premier message'), findsOneWidget);
+    expect(find.text('You: suite'), findsOneWidget);
 
     // Group with that contact.
     await tester.tap(find.text('New chat'));
@@ -383,11 +410,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('à tous'), findsOneWidget);
     expect(find.byIcon(Icons.done_rounded), findsOneWidget);
-    expect(
-      find.byTooltip('Send a photo'),
-      findsNothing,
-      reason: 'text only in v1',
-    );
+    expect(find.byTooltip('Send a photo'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -432,9 +455,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('❤️ 1'), findsOneWidget);
 
+    // Edit in the composer; cancel first, then for real.
+    await tester.tap(find.byTooltip('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editing a post'), findsOneWidget);
+    await tester.tap(find.byTooltip('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editing a post'), findsNothing);
+    await tester.tap(find.byTooltip('Edit'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextField),
+      'Première annonce, corrigée',
+    );
+    await tester.pump();
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Send'));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Première annonce, corrigée'), findsOneWidget);
+    expect(find.textContaining('· edited'), findsOneWidget);
+    expect(find.text('Editing a post'), findsNothing);
+    expect(find.text('❤️ 1'), findsOneWidget, reason: 'same post');
+
+    // Pin it: the banner shows it; × unpins.
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Pin'));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Pinned message'), findsOneWidget);
+    expect(find.text('Première annonce, corrigée'), findsNWidgets(2));
+    await tester.tap(find.text('Pinned message'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Unpin').first);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Pinned message'), findsNothing);
+
     await tester.tap(find.text('Annonces'));
     await tester.pumpAndSettle();
     expect(find.text('Channel info'), findsOneWidget);
+    expect(find.text('Past posts'), findsOneWidget);
+    expect(find.text('Full history'), findsOneWidget);
     expect(find.text('Copy invite'), findsOneWidget);
     expect(find.text('Invite contacts'), findsOneWidget);
     expect(find.text('Leave channel'), findsNothing, reason: 'admin');
@@ -444,7 +510,23 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Annonces'), findsOneWidget);
-    expect(find.text('Première annonce'), findsOneWidget);
+    expect(find.text('Première annonce, corrigée'), findsOneWidget);
+
+    // A contact named in a post opens their chat.
+    await tester.tap(find.text('Annonces'));
+    await tester.pumpAndSettle();
+    final bob = deriveIdentity(bobWords);
+    await tester.enterText(find.byType(TextField), 'Écrivez à ${bob.npub} !');
+    await tester.pump();
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('Send'));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
+    await tester.pumpAndSettle();
+    await tester.tapOnText(find.textRange.ofSubstring(bob.npub));
+    await tester.pumpAndSettle();
+    expect(find.text(usernameFor(bob.publicKey)), findsWidgets);
+    expect(find.byType(ChatScreen), findsOneWidget);
   });
 
   const bobHex =

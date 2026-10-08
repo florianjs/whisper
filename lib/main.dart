@@ -291,7 +291,8 @@ GoRouter buildRouter(IdentityStore identity, LockableVault vault) => GoRouter(
     ),
     GoRoute(
       path: '/channel/join',
-      builder: (context, state) => const JoinChannelScreen(),
+      builder: (context, state) =>
+          JoinChannelScreen(code: state.extra as String?),
     ),
     GoRoute(
       path: '/channel/:pk',
@@ -390,6 +391,9 @@ class _WhisperAppState extends State<WhisperApp> {
     // Android drops sockets while backgrounded; reconnect right away on
     // return instead of waiting out the backoff timer.
     widget.relays.reconnectNow();
+    // Also where a channel's daily history re-send comes due when the app
+    // stays online for days.
+    widget.channels.retryFailed();
   }
 
   DateTime? _hiddenAt;

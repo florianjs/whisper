@@ -75,6 +75,9 @@ Status: 2026-09-30, Android build. What Whisper protects, against whom, and wher
 - **Global passive adversary** correlating Tor traffic timing.
 - **Group admin trust:** the admin decides membership; a malicious member can leak content.
 - **Channel invites carry the read key:** anyone holding one can read and forward. No revocation yet (key rotation planned).
+  "From when they follow" is not enforced by crypto: the app hides earlier posts and the admin stops
+  re-sending them, but the key opens any a relay still holds. Full history: the admin's phone
+  re-publishes its signed posts and edits daily (same ids), relays see the same ciphertext again.
 - **Reaction counts** can be inflated by one person with several identities.
 - **Relays deleting data** after a vanish request is voluntary.
 - **Background delivery** without Google: a foreground service keeps the process, Tor and the

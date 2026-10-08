@@ -4,12 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/group_store.dart';
+import '../data/identity_store.dart';
 import '../data/message_store.dart';
 import '../data/settings_store.dart';
 import '../l10n/app_localizations.dart';
+import '../models/message.dart';
 import '../theme/tokens.dart';
 import '../widgets/app_button.dart';
 import '../widgets/avatar.dart';
+import '../widgets/chat_image.dart';
+import '../widgets/chat_list.dart';
 import '../widgets/chat_parts.dart';
 import '../widgets/group_tile.dart';
 import '../widgets/secure_keyboard.dart';
@@ -36,16 +40,35 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       .map((m) => m.id)
       .toSet();
 
+  late final MessageStore _reads;
+
+  /// Oldest message from others I hadn't seen when opening.
+  String? _firstUnread;
+
+  String get _readKey => 'group:${widget.groupId}';
+
   @override
   void initState() {
     super.initState();
     _initialIds;
+    _reads = context.read<MessageStore>();
+    final last = _reads.lastRead(_readKey);
+    if (last != null) {
+      _firstUnread = context
+          .read<GroupStore>()
+          .messagesIn(widget.groupId)
+          .where((m) => !m.fromMe && m.createdAt > last)
+          .firstOrNull
+          ?.id;
+    }
+    _reads.markRead(_readKey);
     _input.addListener(() => setState(() {}));
     _secure.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    _reads.markRead(_readKey);
     _input.dispose();
     _focus.dispose();
     _secure.dispose();
@@ -57,12 +80,60 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   String get _draft => _paranoiaKeyboard ? _secure.value : _input.text;
 
+  final _list = GlobalKey<ChatListState>();
+
+  /// The message being answered, quoted above the composer.
+  Message? _replyTo;
+
   Future<void> _send() async {
     final text = _draft;
     if (text.trim().isEmpty) return;
     HapticFeedback.selectionClick();
     _paranoiaKeyboard ? _secure.clear() : _input.clear();
-    await context.read<GroupStore>().send(widget.groupId, text);
+    final replyTo = _replyTo?.id;
+    setState(() => _replyTo = null);
+    await context.read<GroupStore>().send(
+      widget.groupId,
+      text,
+      replyTo: replyTo,
+    );
+  }
+
+  Future<void> _attach() async {
+    setState(() => _keyboardOpen = false);
+    final groups = context.read<GroupStore>();
+    await attachImage(
+      context,
+      (prepared) => groups.sendImage(widget.groupId, prepared),
+    );
+  }
+
+  void _reply(Message m) {
+    setState(() => _replyTo = m);
+    if (_paranoiaKeyboard) {
+      setState(() => _keyboardOpen = true);
+    } else {
+      _focus.requestFocus();
+    }
+  }
+
+  String _preview(Message m) =>
+      m.image != null ? AppLocalizations.of(context).photoPreview : m.text;
+
+  String _author(Message m) => m.fromMe
+      ? AppLocalizations.of(context).groupYou
+      : context.read<MessageStore>().displayName(m.peer);
+
+  Widget _quote(Message reply, Message? original) {
+    final l = AppLocalizations.of(context);
+    return QuoteBlock(
+      mine: reply.fromMe,
+      author: original == null ? '' : _author(original),
+      preview: original == null ? l.messageUnavailable : _preview(original),
+      onTap: original == null
+          ? null
+          : () => _list.currentState?.jumpTo(original.id),
+    );
   }
 
   void _openSecureKeyboard() {
@@ -85,6 +156,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final canSend = _draft.trim().isNotEmpty;
     final active = entry.status == GroupStatus.active;
     final keyboardOpen = paranoia.inAppKeyboard && _keyboardOpen && active;
+    final pinned = groups.pinnedIn(widget.groupId);
+    final me = context.read<IdentityStore>().identity?.publicKey;
+    final isAdmin = active && entry.state.admin == me;
+    final byId = {for (final m in messages) m.id: m};
 
     return PopScope(
       canPop: !keyboardOpen,
@@ -131,10 +206,23 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             title: l.chatEncrypted,
                             body: l.groupEmpty,
                           )
-                        : ListView.builder(
-                            reverse: true,
+                        : ChatList(
+                            key: _list,
                             padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
                             itemCount: messages.length,
+                            idAt: (i) => messages[i].id,
+                            firstUnreadId: _firstUnread,
+                            pinned: pinned == null
+                                ? null
+                                : PinnedInfo(
+                                    id: pinned.id,
+                                    preview: paranoia.blurHistory
+                                        ? null
+                                        : pinned.text,
+                                    onUnpin: isAdmin
+                                        ? () => groups.pin(widget.groupId, null)
+                                        : null,
+                                  ),
                             itemBuilder: (context, i) {
                               final m = messages[i];
                               final newer = i > 0 ? messages[i - 1] : null;
@@ -153,6 +241,25 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                 animate: !_initialIds.contains(m.id),
                                 blur: paranoia.blurHistory,
                                 onRetry: () => groups.retry(m.id),
+                                quote: m.replyTo == null
+                                    ? null
+                                    : _quote(m, byId[m.replyTo]),
+                                onActions: active
+                                    ? () => showMessageActions(
+                                        context,
+                                        onReply: () => _reply(m),
+                                        pinned: pinned?.id == m.id,
+                                        // Only the admin pins, for everyone.
+                                        onTogglePin: isAdmin
+                                            ? () => groups.pin(
+                                                widget.groupId,
+                                                pinned?.id == m.id
+                                                    ? null
+                                                    : m.id,
+                                              )
+                                            : null,
+                                      )
+                                    : null,
                                 sender: head && !m.fromMe
                                     ? _SenderLabel(
                                         pubkey: m.peer,
@@ -165,6 +272,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               ),
+              if (_replyTo != null && active)
+                ReplyBar(
+                  author: _author(_replyTo!),
+                  preview: paranoia.blurHistory ? '' : _preview(_replyTo!),
+                  onCancel: () => setState(() => _replyTo = null),
+                ),
               switch (entry.status) {
                 GroupStatus.pending => _InviteBar(entry: entry),
                 GroupStatus.removed => ChatNoticeBar(
@@ -180,6 +293,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           canSend: canSend,
                           onTap: _openSecureKeyboard,
                           onSend: _send,
+                          onAttach: _attach,
                         )
                       : ChatComposer(
                           controller: _input,
@@ -187,6 +301,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           canSend: canSend,
                           obscure: paranoia.maskInput,
                           onSend: _send,
+                          onAttach: _attach,
                         ),
                 ),
               },

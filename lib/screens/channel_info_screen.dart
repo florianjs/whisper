@@ -13,6 +13,7 @@ import '../widgets/app_button.dart';
 import '../widgets/avatar.dart';
 import '../widgets/channel_tile.dart';
 import '../widgets/ui.dart';
+import 'new_channel_screen.dart';
 
 class ChannelInfoScreen extends StatelessWidget {
   const ChannelInfoScreen({super.key, required this.pk});
@@ -62,6 +63,23 @@ class ChannelInfoScreen extends StatelessWidget {
     about.dispose();
     if (ok != true || n.trim().isEmpty || !context.mounted) return;
     await context.read<ChannelStore>().editMeta(pk, name: n, about: a);
+  }
+
+  Future<void> _pickHistory(BuildContext context, ChannelEntry c) async {
+    final store = context.read<ChannelStore>();
+    final picked = await showAppSheet<bool>(
+      context,
+      scrollable: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+        child: ChannelHistoryChoice(
+          fullHistory: c.meta.fullHistory,
+          onChanged: (v) => Navigator.pop(sheetContext, v),
+        ),
+      ),
+    );
+    if (picked == null || picked == c.meta.fullHistory) return;
+    await store.editMeta(pk, fullHistory: picked);
   }
 
   Future<void> _inviteContacts(BuildContext context) async {
@@ -200,6 +218,18 @@ class ChannelInfoScreen extends StatelessWidget {
                     title: l.channelInviteContacts,
                     chevron: true,
                     onTap: () => _inviteContacts(context),
+                  ),
+                if (c.mine)
+                  SettingsTile(
+                    icon: c.meta.fullHistory
+                        ? Icons.history_rounded
+                        : Icons.update_rounded,
+                    title: l.channelHistory,
+                    subtitle: c.meta.fullHistory
+                        ? l.channelHistoryAll
+                        : l.channelHistoryJoin,
+                    chevron: true,
+                    onTap: () => _pickHistory(context, c),
                   ),
               ],
             ),

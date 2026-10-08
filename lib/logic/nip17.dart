@@ -43,6 +43,19 @@ class Nip17 {
   static int _now() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
   static int _jittered(int t) => t - _random.nextInt(_jitterSeconds) - 1;
 
+  /// The message [rumor] replies to (NIP-10 style `e` tag marked "reply"),
+  /// if it names a well-formed id.
+  static String? replyIdOf(Nip01Event rumor) {
+    for (final t in rumor.tags) {
+      if (t.length > 3 && t[0] == 'e' && t[3] == 'reply') {
+        return _hex64.hasMatch(t[1]) ? t[1] : null;
+      }
+    }
+    return null;
+  }
+
+  static final _hex64 = RegExp(r'^[0-9a-f]{64}$');
+
   /// Unsigned kind-14 message. Its id is what both sides store and what
   /// reactions/replies reference; it never travels in clear.
   static Nip01Event chatRumor({

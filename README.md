@@ -99,8 +99,14 @@ switch: the files can be mirrored anywhere, and their checksums tell you if a co
   member, so relays can't even tell a group exists.
 - **Broadcast channels** — one admin posts, invitees read and react. Name, posts and reactions
   are encrypted with a key only invitees hold. Public or private, invite by QR code or link.
-- **Photos** — re-encoded, metadata (EXIF / GPS) stripped, size-capped, then sent in encrypted
-  chunks over the same relays. No file server.
+  The admin edits posts, and chooses whether new followers see earlier posts: with full history,
+  the admin's phone sends them back to the relays once a day, so late followers find them there
+  (the admin never learns who joined).
+- **Photos**, in chats and groups — re-encoded, metadata (EXIF / GPS) stripped, size-capped,
+  then sent in encrypted chunks over the same relays. No file server.
+- **Replies and pinned messages** — quote a message to answer it; pin one at the top of a chat,
+  group (admin) or channel (admin), for everyone. A "New messages" line marks where you left off
+  (read position stays on your phone, never sent).
 - **Profile photo and nickname** — only shared with contacts you accepted.
 - **Message requests** — strangers land in a separate inbox; nothing is shown to them (photo,
   read state) until you accept. Block anytime.
@@ -226,7 +232,8 @@ Full analysis, with adversaries, assets and verified behaviour: **[docs/THREAT_M
 - **A global passive adversary** correlating Tor traffic timing is out of scope.
 - **The inbox subscription reveals your pubkey to your relays.** That's inherent to Nostr.
 - **Group admins** decide membership; any member can leak content.
-- **A channel invite carries the read key.** No revocation yet.
+- **A channel invite carries the read key.** No revocation yet. "From when they follow" only
+  hides earlier posts in the app: that key still opens whatever a relay kept.
 - **Reaction counts** can be inflated by one person with several identities.
 - **Relays honouring a "vanish" request** is voluntary.
 - **Background delivery** needs a foreground service and its permanent notification.

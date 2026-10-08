@@ -86,7 +86,12 @@ void main() {
     final posts = req[2] as Map;
     final reactions = req[3] as Map;
     expect(posts['authors'], [keys.publicKey]);
-    expect(posts['kinds'], [Channel.kindPost, Channel.kindMeta]);
+    expect(posts['kinds'], [
+      Channel.kindPost,
+      Channel.kindMeta,
+      Channel.kindEdit,
+      Channel.kindPin,
+    ]);
     expect(reactions['#p'], [keys.publicKey]);
     expect(reactions['kinds'], [Channel.kindReaction]);
   });
@@ -120,7 +125,10 @@ void main() {
     pool.watchChannels({keys.publicKey, other.publicKey});
     await until(() => relay.reqs.length == 2);
     expect(relay.closes, ['ch']);
-    expect((relay.reqs.last[2] as Map)['authors'], hasLength(2));
+    // One filter per channel: a busy one can't crowd the other out.
+    expect((relay.reqs.last[2] as Map)['authors'], hasLength(1));
+    expect((relay.reqs.last[3] as Map)['authors'], hasLength(1));
+    expect((relay.reqs.last[4] as Map)['#p'], hasLength(2));
 
     // Same set again: no churn.
     pool.watchChannels({other.publicKey, keys.publicKey});
@@ -161,5 +169,29 @@ void main() {
     await until(() => isolated.connected.isNotEmpty);
     expect(created, 1);
     isolated.dispose();
+  });
+
+  test('restore probes ask for metadata only, in one filter', () async {
+    final probe = await ChannelKeys.derive(deriveIdentity(aliceWords), 3);
+    pool.watchChannels({keys.publicKey}, probes: {probe.publicKey});
+    await until(() => relay.reqs.isNotEmpty);
+    final filters = relay.reqs.single.sublist(2).cast<Map>();
+    expect(filters, hasLength(3));
+    final probes = filters.singleWhere(
+      (f) => (f['authors'] as List?)?.contains(probe.publicKey) ?? false,
+    );
+    expect(probes['authors'], [probe.publicKey]);
+    expect(probes['kinds'], [Channel.kindMeta]);
+  });
+
+  test('many channels share a bounded number of filters', () {
+    final pks = {for (var i = 0; i < 20; i++) i.toRadixString(16) * 64};
+    final groups = spreadChannels(pks, ChannelRelayPool.maxPostFilters);
+    expect(groups, hasLength(ChannelRelayPool.maxPostFilters));
+    expect(groups.expand((g) => g).toSet(), pks);
+    expect(spreadChannels({'a'}, 7), [
+      ['a'],
+    ]);
+    expect(spreadChannels({}, 7), isEmpty);
   });
 }

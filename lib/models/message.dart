@@ -26,6 +26,7 @@ class Message {
     required this.status,
     this.image,
     this.groupId,
+    this.replyTo,
   });
 
   final String id;
@@ -46,6 +47,9 @@ class Message {
   /// Set for group messages; then [peer] is the sender (or me).
   final String? groupId;
 
+  /// Id of the message this one answers, quoted above it.
+  final String? replyTo;
+
   DateTime get time => DateTime.fromMillisecondsSinceEpoch(createdAt * 1000);
 
   Message copyWith({MessageStatus? status}) => Message(
@@ -57,6 +61,7 @@ class Message {
     status: status ?? this.status,
     image: image,
     groupId: groupId,
+    replyTo: replyTo,
   );
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +73,7 @@ class Message {
     'status': status.name,
     if (image != null) 'image': image!.toJson(),
     if (groupId != null) 'groupId': groupId,
+    if (replyTo != null) 'replyTo': replyTo,
   };
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -79,6 +85,7 @@ class Message {
     status: MessageStatus.values.byName(json['status'] as String),
     image: ImageHeader.fromJson(json['image']),
     groupId: json['groupId'] as String?,
+    replyTo: json['replyTo'] as String?,
   );
 }
 
