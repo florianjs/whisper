@@ -163,7 +163,8 @@ class PinEntryState extends State<PinEntry> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (final d in row) _Key(label: d, onTap: () => _press(d)),
+                for (final d in row)
+                  _Key(label: d, onTap: () => _press(d), instant: true),
               ],
             ),
           Row(
@@ -173,8 +174,13 @@ class PinEntryState extends State<PinEntry> {
                 icon: Icons.backspace_outlined,
                 onTap: _backspace,
                 subtle: true,
+                instant: true,
               ),
-              _Key(label: _digits[9], onTap: () => _press(_digits[9])),
+              _Key(
+                label: _digits[9],
+                onTap: () => _press(_digits[9]),
+                instant: true,
+              ),
               _Key(
                 icon: _busy ? null : Icons.arrow_forward_rounded,
                 busy: _busy,
@@ -193,7 +199,7 @@ class PinEntryState extends State<PinEntry> {
   }
 }
 
-class _Key extends StatelessWidget {
+class _Key extends StatefulWidget {
   const _Key({
     this.label,
     this.icon,
@@ -201,6 +207,7 @@ class _Key extends StatelessWidget {
     this.subtle = false,
     this.accent = false,
     this.busy = false,
+    this.instant = false,
   });
 
   final String? label;
@@ -210,59 +217,95 @@ class _Key extends StatelessWidget {
   final bool accent;
   final bool busy;
 
+  /// Fires on touch-down, for every finger: typing fast with two thumbs,
+  /// or a touch that slides a little (the pad sits in a scroll view), still
+  /// counts each press. A tap waits for the finger to lift and loses to
+  /// the scroll or to the next finger, dropping digits.
+  final bool instant;
+
+  @override
+  State<_Key> createState() => _KeyState();
+}
+
+class _KeyState extends State<_Key> {
+  /// Fingers currently down on this key (instant keys only).
+  int _down = 0;
+
+  void _pointer(int delta) {
+    final down = max(0, _down + delta);
+    if (down != _down) setState(() => _down = down);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final onTap = widget.onTap;
     final enabled = onTap != null;
+    final accent = widget.accent, subtle = widget.subtle;
     final radius = BorderRadius.circular(AppRadius.lg + 2);
     final fg = accent && enabled ? c.onAccent : c.fg;
+    final base = accent
+        ? (enabled ? null : c.surface2)
+        : (subtle ? Colors.transparent : c.surface);
+    final face = SizedBox(
+      width: 78,
+      height: 64,
+      child: Center(
+        child: widget.busy
+            ? SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: c.onAccent,
+                ),
+              )
+            : widget.icon != null
+            ? Icon(widget.icon, color: accent && !enabled ? c.faint : fg)
+            : Text(
+                widget.label!,
+                style: TextStyle(
+                  color: c.fg,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.all(7),
       child: AnimatedContainer(
-        duration: AppMotion.normal,
+        duration: widget.instant ? AppMotion.fast : AppMotion.normal,
         curve: AppMotion.curve,
         decoration: BoxDecoration(
           borderRadius: radius,
           gradient: accent && enabled ? c.accentGradient : null,
-          color: accent
-              ? (enabled ? null : c.surface2)
-              : (subtle ? Colors.transparent : c.surface),
+          color: _down > 0
+              ? Color.alphaBlend(c.accentSoft, base ?? c.surface)
+              : base,
           border: accent || subtle ? null : Border.all(color: c.border),
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: onTap,
-            splashColor: c.accent.withValues(alpha: 0.18),
-            highlightColor: c.accentSoft,
-            child: SizedBox(
-              width: 78,
-              height: 64,
-              child: Center(
-                child: busy
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: c.onAccent,
-                        ),
-                      )
-                    : icon != null
-                    ? Icon(icon, color: accent && !enabled ? c.faint : fg)
-                    : Text(
-                        label!,
-                        style: TextStyle(
-                          color: c.fg,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+        child: widget.instant
+            ? Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) {
+                  _pointer(1);
+                  onTap?.call();
+                },
+                onPointerUp: (_) => _pointer(-1),
+                onPointerCancel: (_) => _pointer(-1),
+                child: face,
+              )
+            : Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: radius,
+                  onTap: onTap,
+                  splashColor: c.accent.withValues(alpha: 0.18),
+                  highlightColor: c.accentSoft,
+                  child: face,
+                ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
